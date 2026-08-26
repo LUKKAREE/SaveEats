@@ -46,12 +46,49 @@ const db = {
 };
 const seq = { user: 1, store: 1, res: 1 };
 
+/*
+ * ชื่อ property ที่ต้องปล่อยผ่าน ห้ามดักจับ
+ * เพราะ JavaScript ใช้ชื่อพวกนี้ในกลไกภายในของตัวเอง
+ * โดยเฉพาะ "then" ถ้าเผลอคืนฟังก์ชันให้ ตัว await จะเข้าใจผิดว่าเป็น Promise แล้วค้าง
+ */
+const PASS_THROUGH = new Set(['default', '__esModule', 'then', 'toJSON', 'constructor', 'inspect']);
+
+/**
+ * ห่อตัวจำลองไว้ด้วยยาม เพื่อให้ "เมธอดที่ลืมใส่" ฟ้องออกมาตรง ๆ
+ *
+ * *** ปัญหาที่ยามตัวนี้แก้ ***
+ * ตัวจำลองเขียนด้วยมือ ส่วนโมเดลจริงมีคนไปเพิ่มเมธอดใหม่เรื่อย ๆ
+ * พอโค้ดจริงเรียกเมธอดที่ตัวจำลองไม่มี ข้อความ error ที่ได้คือ
+ *     import_userModel.default.findByEmailOrPhone is not a function
+ * ซึ่งอ่านแล้วไม่รู้เลยว่าต้องไปแก้ที่ไหน คนอ่านมักไปนั่งหาบั๊กในโค้ดจริงแทน
+ *
+ * ยามตัวนี้เปลี่ยนให้เป็นข้อความที่บอกชัดว่า "ลืมเพิ่มเมธอดชื่อนี้ในไฟล์เทสต์"
+ * ไม่ได้กันไม่ให้เกิด แต่ทำให้แก้ได้ใน 10 วินาทีแทนที่จะนั่งงงครึ่งชั่วโมง
+ */
+function guardMissing<T extends object>(name: string, target: T): T {
+  return new Proxy(target, {
+    get(obj, prop, receiver): unknown {
+      if (typeof prop === 'symbol' || prop in obj || PASS_THROUGH.has(prop)) {
+        return Reflect.get(obj, prop, receiver);
+      }
+      return (): never => {
+        throw new Error(
+          `ตัวจำลองของ ${name} ไม่มีเมธอด "${String(prop)}"\n`
+          + '  แปลว่าโค้ดจริงเพิ่มเมธอดนี้ไปแล้ว แต่ลืมเพิ่มในฐานข้อมูลจำลองของไฟล์เทสต์\n'
+          + `  วิธีแก้ : เปิด tests/selfTest.ts หาบล็อก mock('${name}', { ... }) แล้วเพิ่ม "${String(prop)}" เข้าไป`
+        );
+      };
+    },
+  });
+}
+
 /** แทนที่โมดูลด้วยของปลอม (ต้องทำก่อน import โมดูลที่ใช้มัน) */
 function mock(relativePath: string, exportsObject: Record<string, unknown>): void {
   const resolved = require.resolve(path.join(__dirname, relativePath));
+  const guarded = guardMissing(relativePath, { ...exportsObject });
   require.cache[resolved] = {
     id: resolved, filename: resolved, loaded: true,
-    exports: { ...exportsObject, default: exportsObject },
+    exports: guardMissing(relativePath, { ...exportsObject, default: guarded }),
   } as NodeJS.Module;
 }
 

@@ -361,7 +361,7 @@ TypeScript ทำให้เรื่องนี้เป็นอัตโน
   Admin 1 คน / ลูกค้า 3 คน / ร้าน 4 ร้าน (3 อนุมัติแล้ว 1 รออนุมัติ)
   เมนู 8 รายการ / โพสต์ 5 โพสต์ / การจอง 3 รายการ / รีวิว 2 รายการ
 
-  *** รหัสผ่านทุกบัญชีคือ 123456 ***
+  *** รหัสผ่านทุกบัญชีคือ Test@1234 ***
 
 *** ชื่อคอลัมน์ทุกตัวใน schema.sql ต้องตรงกับ shared/src/entities.ts เป๊ะ ***
 
@@ -820,13 +820,13 @@ ADMIN (ต้องเป็น role admin เท่านั้น)
   [ ] 7. cd backend แล้ว npm run dev เห็นข้อความ "เชื่อมต่อ saveeats สำเร็จ"
   [ ] 8. เปิด http://localhost:3000/api/health เห็น JSON ตอบกลับมา
   [ ] 9. cd admin-web แล้ว npm run dev เปิด http://localhost:5173
-  [ ] 10. Login ด้วย admin@saveeats.com / 123456 เข้าแดชบอร์ดได้
+  [ ] 10. Login ด้วย admin@saveeats.com / Test@1234 เข้าแดชบอร์ดได้
   [ ] 11. แดชบอร์ดขึ้นตัวเลข "ร้านรออนุมัติ 1"
   [ ] 12. กดเมนู "ร้านรออนุมัติ" เห็นร้านทดสอบ แล้วกดอนุมัติได้
   [ ] 13. cd mobile แล้วแก้ IP ใน src/core/constants/apiConstants.ts
   [ ] 14. cd mobile แล้ว npm run typecheck ไม่มี error
   [ ] 15. npx expo start แล้วสแกน QR ด้วยแอป Expo Go บนมือถือ
-  [ ] 16. บนมือถือ Login ด้วย customer1@test.com / 123456
+  [ ] 16. บนมือถือ Login ด้วย customer1@test.com / Test@1234
   [ ] 17. เห็นหน้า Feed มีการ์ดอาหาร 4 ใบ
 
 ถ้าติดข้อไหน ให้เปิดไฟล์ 02_วิธีติดตั้งและรัน.txt

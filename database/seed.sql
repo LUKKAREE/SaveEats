@@ -4,8 +4,8 @@
 --
 --  วิธีใช้ : Import schema.sql ก่อน แล้วค่อย Import ไฟล์นี้
 --
---  *** รหัสผ่านของทุกบัญชีในไฟล์นี้คือ  123456  ***
---  (ค่าที่เห็นในคอลัมน์ password คือ bcrypt hash ของ 123456)
+--  *** รหัสผ่านของทุกบัญชีในไฟล์นี้คือ  Test@1234  ***
+--  (ค่าที่เห็นในคอลัมน์ password คือ bcrypt hash ของ Test@1234)
 --  ห้ามใช้ข้อมูลชุดนี้ตอนขึ้นระบบจริงเด็ดขาด
 -- =====================================================================
 
@@ -70,14 +70,14 @@ INSERT INTO categories (category_id, name, slug, icon, sort_order) VALUES
 --  5-8   = seller (เจ้าของร้าน)
 -- ---------------------------------------------------------------------
 INSERT INTO users (user_id, name, email, phone, password, role) VALUES
-  (1, 'ผู้ดูแลระบบ',     'admin@saveeats.com',    '0800000000', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'admin'),
-  (2, 'ปาริชาต ใจดี',   'customer1@test.com',    '0811111111', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'customer'),
-  (3, 'ธนกร มั่นคง',     'customer2@test.com',    '0822222222', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'customer'),
-  (4, 'สุชาดา แสงทอง',  'customer3@test.com',    '0833333333', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'customer'),
-  (5, 'ร้านครัวคุณแม่',  'seller1@test.com',      '0844444444', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'seller'),
-  (6, 'ร้านเบเกอรี่หอม', 'seller2@test.com',      '0855555555', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'seller'),
-  (7, 'ร้านข้าวมันไก่',  'seller3@test.com',      '0866666666', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'seller'),
-  (8, 'ร้านรออนุมัติ',   'seller4@test.com',      '0877777777', '$2b$10$6ZdaXUnw2VPFzUfbYViAG.6glJmJAF.5G.ds6AfaDUPkDFF0mJhay', 'seller');
+  (1, 'ผู้ดูแลระบบ',     'admin@saveeats.com',    '0800000000', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'admin'),
+  (2, 'ปาริชาต ใจดี',   'customer1@test.com',    '0811111111', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'customer'),
+  (3, 'ธนกร มั่นคง',     'customer2@test.com',    '0822222222', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'customer'),
+  (4, 'สุชาดา แสงทอง',  'customer3@test.com',    '0833333333', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'customer'),
+  (5, 'ร้านครัวคุณแม่',  'seller1@test.com',      '0844444444', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'seller'),
+  (6, 'ร้านเบเกอรี่หอม', 'seller2@test.com',      '0855555555', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'seller'),
+  (7, 'ร้านข้าวมันไก่',  'seller3@test.com',      '0866666666', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'seller'),
+  (8, 'ร้านรออนุมัติ',   'seller4@test.com',      '0877777777', '$2b$10$d6GkAKIgW2XTO.KI8Qp4xuolNc9fyCKLxYO9gJcR6z9MgYWUI4XJC', 'seller');
 
 -- ---------------------------------------------------------------------
 --  ร้านค้า
@@ -195,7 +195,7 @@ INSERT INTO reports (reporter_id, target_type, target_id, reason, status) VALUES
 -- =====================================================================
 --  จบไฟล์ seed.sql
 --
---  บัญชีสำหรับทดสอบ (รหัสผ่านทุกบัญชีคือ 123456)
+--  บัญชีสำหรับทดสอบ (รหัสผ่านทุกบัญชีคือ Test@1234)
 --    Admin     : admin@saveeats.com
 --    Customer  : customer1@test.com
 --    Seller    : seller1@test.com  (ร้านครัวคุณแม่ อนุมัติแล้ว)
