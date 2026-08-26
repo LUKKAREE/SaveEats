@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    /* ----- เป้าหมายและรูปแบบโมดูล ----- */
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"],
+    "types": ["node"],
+
+    /* ----- ทางลัดของ path -----
+       ทำให้เขียน import ... from '@shared/index' ได้
+       แทนที่จะต้องเขียน '../../../shared/src/index' */
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../shared/src/*"]
+    },
+
+    /* ----- ความเข้มงวด (เปิดเต็มที่) -----
+       strict เปิดรวม 8 ตัวในตัวเดียว เช่น noImplicitAny, strictNullChecks
+       noUncheckedIndexedAccess ทำให้ rows[0] มีชนิดเป็น T | undefined
+       ซึ่งบังคับให้เราเช็คก่อนใช้ ป้องกันบั๊ก "อ่านค่าจากของที่ไม่มี" */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* ----- อื่น ๆ ----- */
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["server.ts", "src/**/*.ts", "tests/**/*.ts", "tools/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

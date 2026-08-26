@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#16A34A"/>
+  <g transform="translate(11.772727272727273,8.727272727272727) scale(0.09090909090909091)">
+  <!-- ตัวหมุด -->
+  <path fill-rule="evenodd" fill="#FFFFFF"
+        d="M 256 476 L 387.3 287.4 A 160 160 0 1 0 124.7 287.4 Z
+           M 256 80 A 116 116 0 1 0 256 312 A 116 116 0 1 0 256 80 Z"/>
+
+  <!-- ช้อน (ซ้าย) -->
+  <ellipse cx="218" cy="158" rx="23" ry="31" fill="#FFFFFF"/>
+  <rect x="210" y="182" width="16" height="88" rx="8" fill="#FFFFFF"/>
+
+  <!-- ส้อม (ขวา) : 3 ซี่ + หัว + ด้าม -->
+  <rect x="272" y="126" width="11" height="52" rx="5.5" fill="#FFFFFF"/>
+  <rect x="288" y="126" width="11" height="52" rx="5.5" fill="#FFFFFF"/>
+  <rect x="304" y="126" width="11" height="52" rx="5.5" fill="#FFFFFF"/>
+  <path d="M 272 164 H 315 V 178 C 315 190 306 198 294 198 H 293 C 281 198 272 190 272 178 Z"
+        fill="#FFFFFF"/>
+  <rect x="286" y="186" width="15" height="84" rx="7.5" fill="#FFFFFF"/></g>
+</svg>

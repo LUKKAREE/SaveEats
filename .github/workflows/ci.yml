@@ -1,0 +1,116 @@
+# =====================================================================
+#  SaveEats - Continuous Integration
+#
+#  ไฟล์นี้บอก GitHub ว่า "ทุกครั้งที่มีคน push ให้เอาโค้ดไปตรวจให้หน่อย"
+#  GitHub จะยกเครื่องคอมเปล่า ๆ มาให้ 1 เครื่อง รันคำสั่งข้างล่างตามลำดับ
+#  ถ้าคำสั่งไหนพัง (exit code ไม่ใช่ 0) จะขึ้นกากบาทแดงบนหน้า repo ทันที
+#
+#  ที่อยู่ของไฟล์ห้ามเปลี่ยน ต้องเป็น .github/workflows/ เท่านั้น
+#  GitHub มองหาที่นี่ที่เดียว วางผิดที่ = ไม่ทำงานและไม่มีข้อความเตือนด้วย
+# =====================================================================
+
+name: CI
+
+# ---------------------------------------------------------------
+#  1) ทำงานเมื่อไหร่
+# ---------------------------------------------------------------
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  # เปิดให้กดสั่งรันเองจากหน้าเว็บ GitHub ได้ด้วย (ใช้ตอนสาธิตหน้าห้อง)
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------
+  #  งานที่ 1 : Backend - ตรวจชนิดข้อมูล + รันเทสต์ 21 ข้อ
+  # ---------------------------------------------------------------
+  backend:
+    name: Backend (typecheck + test)
+    runs-on: ubuntu-latest
+
+    steps:
+      # ดึงโค้ดจาก repo ลงมาใส่เครื่องเปล่าที่ GitHub เตรียมให้
+      - name: ดึงโค้ดลงมา
+        uses: actions/checkout@v4
+
+      - name: ติดตั้ง Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          # เก็บ node_modules ไว้ใช้รอบหน้า รอบต่อไปจะเร็วขึ้นมาก
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # ใช้ npm ci ไม่ใช่ npm install
+      # ci = ลงตามเวอร์ชันที่ล็อกไว้ใน package-lock.json เป๊ะ ๆ ห้ามอัปเดตเอง
+      # ทำให้ผลบนเครื่อง CI เหมือนกับบนเครื่องเราทุกครั้ง ไม่มี "เครื่องฉันรันได้"
+      - name: ติดตั้งไลบรารี
+        run: npm ci
+        working-directory: backend
+
+      - name: ตรวจชนิดข้อมูล (TypeScript)
+        run: npm run typecheck
+        working-directory: backend
+
+      - name: รันเทสต์
+        run: npm test
+        working-directory: backend
+
+  # ---------------------------------------------------------------
+  #  งานที่ 2 : แอปมือถือ - ตรวจชนิดข้อมูล
+  # ---------------------------------------------------------------
+  mobile:
+    name: Mobile (typecheck)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ดึงโค้ดลงมา
+        uses: actions/checkout@v4
+
+      - name: ติดตั้ง Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: ติดตั้งไลบรารี
+        run: npm ci
+        working-directory: mobile
+
+      - name: ตรวจชนิดข้อมูล (TypeScript)
+        run: npm run typecheck
+        working-directory: mobile
+
+  # ---------------------------------------------------------------
+  #  งานที่ 3 : หน้า Admin - ตรวจชนิดข้อมูล + สั่ง build จริง
+  # ---------------------------------------------------------------
+  admin-web:
+    name: Admin Web (typecheck + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ดึงโค้ดลงมา
+        uses: actions/checkout@v4
+
+      - name: ติดตั้ง Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
+
+      - name: ติดตั้งไลบรารี
+        run: npm ci
+        working-directory: admin-web
+
+      # build จะเรียก typecheck ให้ในตัวอยู่แล้ว (ดู scripts ใน package.json)
+      # แต่ทำ 2 ขั้นแยกกัน เพราะถ้าพังจะเห็นทันทีว่าพังเพราะชนิดข้อมูล หรือพังตอน build
+      - name: ตรวจชนิดข้อมูล (TypeScript)
+        run: npm run typecheck
+        working-directory: admin-web
+
+      - name: สั่ง build
+        run: npm run build
+        working-directory: admin-web

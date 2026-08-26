@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "SaveEats",
+    "slug": "saveeats",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.saveeats.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SaveEats ใช้ตำแหน่งของคุณเพื่อค้นหาร้านอาหารที่อยู่ใกล้",
+        "NSCameraUsageDescription": "SaveEats ใช้กล้องเพื่อสแกน QR Code ยืนยันการรับอาหาร",
+        "NSPhotoLibraryUsageDescription": "SaveEats ขอเข้าถึงรูปภาพเพื่ออัปโหลดรูปอาหารและรูปร้าน"
+      }
+    },
+    "android": {
+      "package": "com.saveeats.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#16A34A"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "SaveEats ใช้ตำแหน่งของคุณเพื่อค้นหาร้านอาหารที่อยู่ใกล้"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SaveEats ใช้กล้องเพื่อสแกน QR Code ยืนยันการรับอาหาร"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SaveEats ขอเข้าถึงรูปภาพเพื่ออัปโหลดรูปอาหารและรูปร้าน",
+          "cameraPermission": "SaveEats ใช้กล้องเพื่อถ่ายรูปอาหารที่จะลงขาย"
+        }
+      ]
+    ]
+  }
+}

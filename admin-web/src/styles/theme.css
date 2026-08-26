@@ -1,0 +1,312 @@
+/* =====================================================================
+   SaveEats Admin Web - ธีมกลาง
+
+   *** ชุดสีนี้ต้องตรงกับ mobile/src/core/theme/colors.js เสมอ ***
+   ถ้าแก้ที่นี่ ต้องไปแก้ที่ไฟล์นั้นด้วย ธีมจะได้ไปในทิศทางเดียวกัน
+
+   แนวคิดของธีม
+     เขียว = อาหารที่ถูกช่วยไว้ ความสดใหม่ สิ่งแวดล้อม (สีหลักของแบรนด์)
+     ส้ม   = ความอร่อย ความเร่งด่วน ใช้เน้นส่วนลดและเวลาที่เหลือ
+   ===================================================================== */
+
+:root {
+  /* ---- สีหลักของแบรนด์ ---- */
+  --color-primary: #16A34A;
+  --color-primary-dark: #15803D;
+  --color-primary-light: #DCFCE7;
+  --color-primary-surface: #F0FDF4;
+
+  /* ---- สีรอง ---- */
+  --color-accent: #F97316;
+  --color-accent-dark: #EA580C;
+  --color-accent-light: #FFEDD5;
+
+  /* ---- พื้นหลังและพื้นผิว ---- */
+  --color-background: #F7F9F7;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F3F4F6;
+
+  /* ---- ตัวหนังสือ ---- */
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+  --color-text-on-primary: #FFFFFF;
+
+  /* ---- เส้นขอบ ---- */
+  --color-border: #E5E7EB;
+  --color-border-strong: #D1D5DB;
+
+  /* ---- สีบอกสถานะ ---- */
+  --color-success: #16A34A;
+  --color-success-bg: #DCFCE7;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-warning-text: #92400E;
+  --color-error: #DC2626;
+  --color-error-bg: #FEE2E2;
+  --color-info: #2563EB;
+  --color-info-bg: #DBEAFE;
+  --color-star: #FBBF24;
+
+  /* ---- ระยะห่าง (ทวีคูณของ 4 เหมือนฝั่งแอป) ---- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+
+  /* ---- ความโค้ง ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ---- เงา ---- */
+  --shadow-card: 0 2px 8px rgba(16, 24, 40, 0.08);
+  --shadow-float: 0 6px 16px rgba(16, 24, 40, 0.14);
+
+  /* ---- ขนาด ---- */
+  --sidebar-width: 248px;
+  --header-height: 64px;
+
+  /* ---- ฟอนต์ ---- */
+  --font-family: 'Prompt', -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ---------------------------------------------------------------
+   รีเซ็ตพื้นฐาน
+   --------------------------------------------------------------- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font-family);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  background: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+input, select, textarea { font-family: inherit; font-size: inherit; }
+
+/* ---------------------------------------------------------------
+   คลาสที่ใช้ซ้ำทั้งเว็บ
+   --------------------------------------------------------------- */
+
+/* --- การ์ด --- */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-lg);
+}
+/*
+  การ์ดที่กดได้
+
+  *** ไม่มีเอฟเฟกต์ตอนเอาเมาส์ชี้โดยตั้งใจ ***
+  เคยใส่ให้การ์ดยกตัวขึ้นตอน hover แต่การ์ด 8 ใบเรียงติดกัน
+  พอเลื่อนเมาส์ผ่านทีเดียวมันขยับไล่กันทั้งแถว ดูวุ่นวายกว่าที่ได้ประโยชน์
+
+  สัญญาณว่า "กดได้" ใช้ลูกศร › ท้ายการ์ดกับ cursor เป็นรูปมือแทน
+  ซึ่งบอกได้ชัดพอ ๆ กัน โดยที่หน้าจอไม่ต้องขยับเลยสักนิด
+*/
+.card-clickable {
+  cursor: pointer;
+}
+/* กดคีย์บอร์ด Tab มาถึงก็ต้องเห็นว่าอยู่ตรงไหน ไม่ใช่เห็นเฉพาะคนใช้เมาส์ */
+.card-clickable:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.card-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+}
+
+/* --- ปุ่ม --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  height: 40px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  transition: filter .15s ease, background .15s ease;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { filter: brightness(0.95); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-primary { background: var(--color-primary); color: var(--color-text-on-primary); }
+.btn-accent  { background: var(--color-accent);  color: var(--color-text-on-primary); }
+.btn-danger  { background: var(--color-error);   color: var(--color-text-on-primary); }
+.btn-outline {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+}
+.btn-ghost { background: transparent; color: var(--color-text-secondary); }
+.btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.btn-block { width: 100%; }
+
+/* --- ช่องกรอกข้อมูล --- */
+.field { margin-bottom: var(--space-md); }
+.field-label {
+  display: block;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+.input, .select {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color .15s ease;
+}
+.input:focus, .select:focus { border-color: var(--color-primary); }
+.input-error { border-color: var(--color-error); background: var(--color-error-bg); }
+.field-error { font-size: 12px; color: var(--color-error); margin-top: var(--space-xs); }
+
+/* --- ป้ายสถานะ --- */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.badge-pending   { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.badge-approved  { background: var(--color-success-bg); color: var(--color-success); }
+.badge-rejected  { background: var(--color-error-bg);   color: var(--color-error); }
+.badge-suspended { background: var(--color-surface-alt); color: var(--color-text-muted); }
+.badge-confirmed { background: var(--color-info-bg);    color: var(--color-info); }
+.badge-waiting   { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.badge-completed { background: var(--color-success-bg); color: var(--color-success); }
+.badge-expired   { background: var(--color-surface-alt); color: var(--color-text-muted); }
+.badge-cancelled { background: var(--color-error-bg);   color: var(--color-error); }
+.badge-good      { background: var(--color-success-bg); color: var(--color-success); }
+.badge-warning   { background: var(--color-warning-bg); color: var(--color-warning-text); }
+/* สถานะโพสต์ (ใช้สีชุดเดียวกับสถานะการจอง เพื่อให้จำง่าย) */
+.badge-active    { background: var(--color-success-bg); color: var(--color-success); }
+.badge-sold_out  { background: var(--color-info-bg);    color: var(--color-info); }
+.badge-hidden    { background: var(--color-surface-alt); color: var(--color-text-muted); }
+.badge-open      { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.badge-reviewing { background: var(--color-info-bg);    color: var(--color-info); }
+.badge-resolved  { background: var(--color-success-bg); color: var(--color-success); }
+
+/* --- ตาราง --- */
+.table-wrap {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  text-align: left;
+  padding: 14px var(--space-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.table td {
+  padding: 14px var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+  vertical-align: middle;
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover { background: var(--color-primary-surface); }
+
+/* --- ข้อความแจ้งเตือน --- */
+.alert {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  margin-bottom: var(--space-md);
+}
+.alert-error   { background: var(--color-error-bg);   color: var(--color-error); }
+.alert-success { background: var(--color-success-bg); color: var(--color-success); }
+.alert-info    { background: var(--color-info-bg);    color: var(--color-info); }
+.alert-warning { background: var(--color-warning-bg); color: var(--color-warning-text); }
+
+/* --- ตัวช่วยจัดวาง --- */
+.row { display: flex; align-items: center; gap: var(--space-sm); }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
+.grid { display: grid; gap: var(--space-md); }
+.text-muted { color: var(--color-text-secondary); }
+.text-small { font-size: 13px; }
+.mt-md { margin-top: var(--space-md); }
+.mb-md { margin-bottom: var(--space-md); }
+
+/* --- สถานะว่างเปล่าและกำลังโหลด --- */
+.empty-state, .loading-state {
+  text-align: center;
+  padding: var(--space-xxl) var(--space-lg);
+  color: var(--color-text-secondary);
+}
+.spinner {
+  width: 36px; height: 36px;
+  margin: 0 auto var(--space-md);
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* =====================================================================
+   ไอคอน
+
+   *** ใช้ฟอนต์ Ionicons ตัวเดียวกับแอปมือถือ ***
+   ไฟล์อยู่ที่ public/fonts/Ionicons.ttf ก๊อปมาจาก node_modules ของ mobile
+   ไอคอนบนเว็บกับบนมือถือจึงเป็นรูปเดียวกันเป๊ะ
+
+   ข้อดีเทียบกับ emoji แบบเดิม
+     - เปลี่ยนสีตาม CSS ได้ (emoji เปลี่ยนสีไม่ได้)
+     - ทุกเครื่องเห็นเหมือนกัน (emoji แต่ละ OS วาดคนละแบบ)
+     - ขนาดคุมได้แม่นยำ ไม่ดันบรรทัดให้สูงผิดปกติ
+   ===================================================================== */
+@font-face {
+  font-family: 'Ionicons';
+  src: url('/fonts/Ionicons.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  /* แสดงตัวหนังสือสำรองไปก่อนระหว่างโหลดฟอนต์ หน้าจะได้ไม่กะพริบเป็นช่องว่าง */
+  font-display: block;
+}
+
+.icon {
+  font-family: 'Ionicons';
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* ทำให้เส้นไอคอนคมบนจอความละเอียดสูง */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

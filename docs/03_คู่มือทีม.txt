@@ -1,0 +1,734 @@
+================================================================================
+              SaveEats - คู่มือทีม : แบ่งงาน Git และสิ่งที่ต้องทำต่อ
+================================================================================
+เอกสารนี้สำหรับส่งต่อให้เพื่อนในทีมทำงานต่อ
+อ่านหลังจากติดตั้งเสร็จแล้ว (ไฟล์ 02) และเข้าใจภาพรวมแล้ว (ไฟล์ 01)
+
+
+================================================================================
+ส่วนที่ 1 : กฎเหล็ก 7 ข้อ - อ่านก่อนเขียนโค้ดบรรทัดแรก
+================================================================================
+
+กฎข้อ 1 : Mobile และ Admin Web ห้ามต่อ Database โดยตรง
+-------------------------------------------------------
+    [ผิด]   Mobile  ->  MySQL
+    [ถูก]   Mobile  ->  Backend API  ->  MySQL
+
+    เหตุผล : ถ้าต่อตรง ทุกคนที่มีแอปจะเห็นรหัสผ่าน Database
+    ในทางปฏิบัติ : ห้ามติดตั้ง mysql2 ในโปรเจกต์ mobile หรือ admin-web
+
+กฎข้อ 2 : Business Logic ต้องอยู่ที่ backend/src/services/ เท่านั้น
+--------------------------------------------------------------------
+    สิ่งที่ต้องอยู่ที่ services
+        การตัดจำนวนอาหาร
+        การตรวจเวลารับ
+        การออก QR และรหัส 4 หลัก
+        การตรวจสิทธิ์
+        การคำนวณระยะทาง
+        การคำนวณคะแนนความประพฤติ
+
+    ห้ามเขียนกระจายอยู่ใน UI เด็ดขาด
+
+กฎข้อ 3 : ตรวจสิทธิ์ที่ Backend เสมอ
+------------------------------------
+    การซ่อนปุ่มใน UI ไม่นับว่าเป็นการรักษาความปลอดภัย
+    เพราะใครก็เปิด Postman ยิง API ตรงได้
+
+    ในทางปฏิบัติ : ทุก route ที่ต้องจำกัดสิทธิ์ ต้องมี
+        router.get('/xxx', auth, requireRole('admin'), controller.xxx)
+
+กฎข้อ 4 : QR ต้องผ่าน Backend ทุกครั้ง
+--------------------------------------
+    ห้ามให้แอปตัดสินเองว่า QR ถูกต้องหรือไม่
+
+    [ผิด]  แอปอ่าน QR -> แอปเช็คเองว่าถูก -> แอปบอกว่าผ่าน
+    [ถูก]  แอปอ่าน QR -> ส่งไป POST /api/reservations/verify -> Backend ตัดสิน
+
+    เหตุผล : ถ้าให้แอปตัดสิน จะโดนปลอม QR ได้ง่ายมาก และใช้ QR ซ้ำได้
+
+กฎข้อ 5 : หน้าตาข้อมูลประกาศไว้ที่ shared/ ที่เดียว
+---------------------------------------------------
+    Database  <->  shared/  <->  Backend และ Mobile และ Admin Web
+
+    *** ห้ามประกาศ interface ของข้อมูลซ้ำในแต่ละโปรเจกต์เด็ดขาด ***
+    ถ้าต้องการหน้าตาข้อมูลอะไร ให้ import จาก @shared/index
+
+        import type { Post, Reservation, Store } from '@shared/index';
+
+    เดิม (ตอนใช้ JavaScript) กฎข้อนี้เขียนว่า "ตั้งชื่อ field ให้ตรงกันเป๊ะ"
+    ซึ่งต้องอาศัยความจำและวินัยของคน
+    ตอนนี้ประกาศที่เดียว ถ้าไม่ตรง TypeScript จะฟ้องทันที
+
+    ชื่อ field ใน shared/src/entities.ts ต้องตรงกับคอลัมน์ใน schema.sql เป๊ะ
+        Database  : discount_price
+        shared    : discount_price
+        Backend   : post.discount_price
+        Mobile    : post.discount_price
+
+    ถ้าแก้ชื่อคอลัมน์ใน schema.sql ให้ทำแค่ 3 ขั้น
+        1. แก้ schema.sql
+        2. แก้ shared/src/entities.ts ให้ตรง
+        3. รัน npm run typecheck ทั้ง 3 โฟลเดอร์
+           แล้วแก้ตามที่ TypeScript ชี้จนหมด error
+
+    *** ห้ามใช้ any และห้ามใช้เครื่องหมาย ! เพื่อปิดปาก TypeScript ***
+    ทั้งสองอย่างทำให้เรากลับไปมีปัญหาแบบเดิมของ JavaScript
+
+กฎข้อ 6 : ห้ามเอา .env ขึ้น GitHub
+----------------------------------
+    ถ้าเพิ่มตัวแปรใหม่ใน .env ต้องไปเพิ่มชื่อตัวแปรใน .env.example ด้วย
+    (ใส่แค่ชื่อ ไม่ใส่ค่าจริง)
+
+    ถ้าเผลอ commit ไปแล้ว ต้องเปลี่ยน JWT_SECRET ใหม่ทันที
+
+กฎข้อ 7 : รูปที่ผู้ใช้อัปโหลด ห้ามเก็บใน assets
+-----------------------------------------------
+    mobile/assets/     = ไฟล์ที่ติดมากับตัวแอปตั้งแต่แรก (logo, ฟอนต์, รูป default)
+    backend/uploads/   = ไฟล์ที่ผู้ใช้ส่งเข้าระบบ (รูปอาหาร รูปร้าน รูปโปรไฟล์)
+
+
+================================================================================
+ส่วนที่ 2 : การแบ่งงาน 3 คน
+================================================================================
+
+*** ตอนนี้หน้าจอทั้งหมดเขียนเสร็จแล้ว (มือถือ 28 หน้า + Admin Web 10 หน้า) ***
+งานที่แบ่งกันต่อจากนี้จึงเป็นงาน "ทดสอบ ปรับปรุง และต่อยอด" ไม่ใช่งานสร้างใหม่
+
+--------------------------------------------------------------------------------
+คนที่ 1 : Mobile ฝั่ง Customer + งานออกแบบ UI
+--------------------------------------------------------------------------------
+  โฟลเดอร์ที่รับผิดชอบ
+      mobile/src/features/
+      mobile/src/components/
+      mobile/assets/
+
+  งานที่ต้องทำ
+      1. ทดสอบทุกหน้าฝั่งลูกค้าบนมือถือจริง ตามแผนในไฟล์ 06
+      2. ขอ Google Maps API Key แล้วใส่ในไฟล์ mobile/.env
+         (หน้าแผนที่จะเป็นจอเทาจนกว่าจะใส่ ดูขั้นตอนในไฟล์ 02 ขั้นที่ 5)
+      3. เขียนหน้า "รีวิวของฉัน" API พร้อมแล้วที่ GET /api/reviews/my
+         ตอนนี้เมนูในหน้าโปรไฟล์ขึ้นว่า "เร็ว ๆ นี้"
+      4. เปลี่ยนโลโก้และรูปใน assets/images/ เป็นของที่ทีมออกแบบเอง
+         (ตอนนี้เป็นรูปที่สร้างขึ้นชั่วคราว ใช้ส่งงานได้แต่ยังไม่สวย)
+      5. ไล่เก็บรายละเอียด UX ตาม checklist ในไฟล์ 04
+
+--------------------------------------------------------------------------------
+คนที่ 2 : Backend + Database + shared/
+--------------------------------------------------------------------------------
+  โฟลเดอร์ที่รับผิดชอบ
+      backend/
+      database/
+      shared/       <-- ดูแล type กลาง ถ้าจะแก้ต้องบอกทั้งทีมก่อน
+
+  งานที่ต้องทำ
+      1. ทดสอบ API ทุกเส้นด้วย Thunder Client หรือ Postman (56 เส้น)
+      2. เพิ่ม endpoint ที่ยังไม่มี
+             PUT    /api/admin/stores/:id/unsuspend ปลดระงับร้าน
+             GET    /api/stores/me/stats            สถิติของร้าน
+      3. เขียนคำสั่ง SQL สำหรับรายงานสรุปที่ Admin อยากได้
+
+      *** ระบบลืมรหัสผ่านตัดออกจากขอบเขตแล้ว ไม่ต้องทำ ***
+      ถ้าผู้ใช้ลืมรหัสผ่าน ให้ผู้ดูแลระบบตั้งรหัสใหม่ให้ผ่านฐานข้อมูล
+      วิธีทำ : สร้าง hash ด้วย bcrypt แล้ว UPDATE users SET password = '<hash>'
+
+      หมายเหตุ : endpoint 3 ตัวนี้ทำเสร็จแล้ว ไม่ต้องทำซ้ำ
+             PUT    /api/auth/me                 แก้ไขข้อมูลส่วนตัว
+             PUT    /api/admin/posts/:id/hide    Admin ซ่อนโพสต์
+             DELETE /api/admin/reviews/:id       Admin ลบรีวิว
+
+      และงานปิดการจองหมดอายุอัตโนมัติทำแล้วเช่นกัน
+             backend/src/jobs/expireReservationsJob.ts  ทำงานทุก 5 นาที
+             ใช้ setInterval ของ Node ไม่ได้ลง node-cron เพิ่ม
+             (แพ็กเกจน้อย = เพื่อนในทีมติดตั้งง่าย โอกาสพังตอนส่งงานน้อย)
+
+--------------------------------------------------------------------------------
+คนที่ 3 : Admin Web + Mobile ฝั่ง Seller
+--------------------------------------------------------------------------------
+  โฟลเดอร์ที่รับผิดชอบ
+      admin-web/
+      mobile/src/seller/
+
+  งานที่ต้องทำ
+      1. ทดสอบทุกหน้าฝั่งร้านบนมือถือจริง โดยเฉพาะการสแกน QR
+         (Emulator สแกน QR ไม่ได้ ต้องใช้เครื่องจริง)
+      2. ทดสอบ Admin Web ครบทั้ง 10 หน้า
+      3. เพิ่มปุ่ม "ปลดระงับร้าน" ในหน้า StoreListPage
+         (รอ endpoint จากคนที่ 2 ก่อน)
+      4. เพิ่มการแบ่งหน้า (pagination) ในตารางที่ข้อมูลอาจเยอะ
+         ตอนนี้ทุกหน้าดึงมา 100 แถวแล้วกรองในเบราว์เซอร์ ซึ่งพอสำหรับตอนนี้
+         แต่ถ้าข้อมูลเกินหลักพันจะเริ่มช้า
+
+
+================================================================================
+ส่วนที่ 3 : ลำดับการทดสอบที่แนะนำ
+================================================================================
+
+เดิมหัวข้อนี้เป็น "ลำดับการเขียนโค้ด" แต่ตอนนี้เขียนครบแล้ว
+จึงเปลี่ยนเป็นลำดับการทดสอบแทน ทำตามนี้จะหาสาเหตุของปัญหาได้เร็วที่สุด
+
+  รอบที่ 1 : พิสูจน์ว่ากฎของระบบถูก (ไม่ต้องเปิดแอปเลย)
+      cd backend
+      npm test
+      -> ต้องผ่าน 21 ข้อจาก 21 ข้อ
+      ถ้าไม่ผ่าน ปัญหาอยู่ที่ Logic ของ Backend ไม่ต้องไปหาที่หน้าจอ
+
+  รอบที่ 2 : พิสูจน์ว่าฐานข้อมูลพร้อม
+      cd backend
+      npm run check-db
+      -> ต้องเจอครบ 11 ตาราง และทุกบัญชีใช้รหัส 123456 ได้
+
+  รอบที่ 3 : พิสูจน์ว่า API ตอบถูก (Thunder Client)
+      ทำตามส่วนที่ 7 ของไฟล์นี้
+
+  รอบที่ 4 : พิสูจน์ว่าหน้าจอต่อกับ Backend ถูก
+      ทำตามไฟล์ 06_แผนการทดสอบ.txt ตั้งแต่รอบ B เป็นต้นไป
+
+  *** ทำไมต้องเรียงแบบนี้ ***
+  ถ้าข้ามไปทดสอบหน้าจอเลย พอเจอปัญหาจะแยกไม่ออกว่าผิดที่หน้าจอ ที่ API
+  หรือที่ฐานข้อมูล ต้องไล่หาทีละชั้น เสียเวลากว่ามาก
+  ไล่จากชั้นในออกมาชั้นนอก พอเจอปัญหาจะรู้ทันทีว่าอยู่ชั้นไหน
+
+
+================================================================================
+ส่วนที่ 4 : การทำงานร่วมกันผ่าน GitHub
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1  ตั้ง Repository ครั้งแรก (ทำครั้งเดียว โดยคนใดคนหนึ่ง)
+--------------------------------------------------------------------------------
+
+  1. สร้าง Repository ใหม่บน GitHub ตั้งชื่อ SaveEats
+     - เลือก Private
+     - *** ไม่ต้องติ๊ก Add README / .gitignore / license ***
+       (เพราะเรามีอยู่แล้ว จะได้ไม่ชนกัน)
+
+  2. บนคอมของคนที่สร้าง
+         cd C:\Users\Admin\OneDrive\Desktop\SaveEats
+
+         git init
+         git add .
+         git status              <- *** เช็คก่อน commit ทุกครั้ง ***
+
+     *** ก่อนกด commit ให้ดู git status ให้แน่ใจว่า ***
+         [ ] ไม่มี node_modules/
+         [ ] ไม่มี .env  (ต้องมีแค่ .env.example)
+         [ ] ไม่มีไฟล์รูปใน backend/uploads/
+
+     ถ้าเห็นของพวกนี้ แปลว่า .gitignore ยังไม่ทำงาน อย่าเพิ่ง commit
+
+         git commit -m "โครงเริ่มต้นของ SaveEats: database, backend, mobile, admin-web"
+         git branch -M main
+         git remote add origin https://github.com/<ชื่อ>/SaveEats.git
+         git push -u origin main
+
+  3. สร้าง branch develop
+         git checkout -b develop
+         git push -u origin develop
+
+  4. เชิญเพื่อนเข้า Repository
+     Settings -> Collaborators -> Add people
+
+--------------------------------------------------------------------------------
+4.2  คนอื่นดึงโค้ดมาใช้ครั้งแรก
+--------------------------------------------------------------------------------
+
+      git clone https://github.com/<ชื่อ>/SaveEats.git
+      cd SaveEats
+      git checkout develop
+
+      cd backend && npm install && copy .env.example .env
+      cd ../admin-web && npm install
+      cd ../mobile && npm install
+
+      *** อย่าลืมแก้ IP ใน mobile/src/core/constants/apiConstants.ts ***
+      *** และอย่า commit การแก้ IP ขึ้นไป เพราะ IP ของแต่ละคนไม่เหมือนกัน ***
+
+--------------------------------------------------------------------------------
+4.3  โครง Branch
+--------------------------------------------------------------------------------
+
+      main
+       |
+       +-- develop
+            |
+            +-- feature/seller-food
+            +-- feature/seller-post
+            +-- feature/customer-reservation
+            +-- feature/scan-qr
+            +-- feature/map
+            +-- feature/admin-reports
+
+  กติกา
+      *** ห้าม push ลง main ตรง ๆ เด็ดขาด ***
+      ให้ทำงานบน feature branch แล้ว merge เข้า develop
+      พอ develop เสถียรแล้วค่อย merge เข้า main
+
+--------------------------------------------------------------------------------
+4.4  ขั้นตอนทำงานประจำวัน
+--------------------------------------------------------------------------------
+
+  ตอนเริ่มงาน
+      git checkout develop
+      git pull origin develop
+      git checkout -b feature/ชื่องานของคุณ
+
+  ระหว่างทำงาน (commit บ่อย ๆ ดีกว่า commit ทีเดียวก้อนใหญ่)
+      npm run typecheck        <-- *** รันก่อน commit ทุกครั้ง ***
+      git add .
+      git commit -m "เพิ่มหน้าสร้างโพสต์ของร้าน"
+
+  *** ถ้า typecheck ไม่ผ่าน ห้าม commit ***
+  เพราะเพื่อนที่ pull ไปจะเจอ error ทันทีและทำงานต่อไม่ได้
+  ถ้าเป็น backend ให้รัน npm test ด้วย (ต้องผ่าน 21 ข้อ)
+
+  ตอนจะส่งงาน
+      git checkout develop
+      git pull origin develop           <- ดึงงานของเพื่อนมาก่อน
+      git checkout feature/ชื่องานของคุณ
+      git merge develop                 <- แก้ conflict ตรงนี้ถ้ามี
+      git push -u origin feature/ชื่องานของคุณ
+
+  แล้วเข้า GitHub เปิด Pull Request จาก feature branch เข้า develop
+  ให้เพื่อนกดดูก่อน merge
+
+--------------------------------------------------------------------------------
+4.5  วิธีตั้งชื่อ commit ที่ดี
+--------------------------------------------------------------------------------
+
+  [ดี]
+      เพิ่มหน้าสร้างโพสต์ของร้าน
+      แก้บั๊กที่จำนวนอาหารติดลบเมื่อจองพร้อมกัน
+      ปรับสีปุ่มจองให้ตรงกับธีม
+
+  [ไม่ดี]
+      update
+      fix
+      งานวันนี้
+      asdf
+
+--------------------------------------------------------------------------------
+4.6  ป้องกัน conflict
+--------------------------------------------------------------------------------
+
+  1. แต่ละคนแก้เฉพาะโฟลเดอร์ของตัวเอง
+  2. ถ้าต้องแก้ไฟล์กลาง ให้บอกในกลุ่มก่อนเสมอ
+     ไฟล์กลางคือ
+         shared/src/*.ts                        <-- สำคัญที่สุด กระทบทั้ง 3 ฝั่ง
+         mobile/src/core/theme/theme.ts
+         mobile/src/core/constants/apiConstants.ts
+         mobile/src/navigation/types.ts   <-- ชื่อหน้าจอทั้งหมดอยู่ที่นี่ที่เดียว
+         admin-web/src/styles/theme.css
+         database/schema.sql
+  3. git pull origin develop ทุกเช้าก่อนเริ่มงาน
+  4. อย่าปล่อยให้ branch ตัวเองเก่าเกิน 2-3 วัน
+
+
+================================================================================
+ส่วนที่ 5 : สิ่งที่ต้องทำต่อ (เช็คลิสต์)
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1  Backend - endpoint ที่ยังไม่มี  (เหลือ 2 เส้น)
+--------------------------------------------------------------------------------
+  [ ] PUT    /api/admin/stores/:id/unsuspend    ปลดระงับร้าน
+  [ ] GET    /api/stores/me/stats               สถิติของร้าน (ยอดขาย จำนวนจอง)
+
+  ทำเสร็จแล้ว ไม่ต้องทำซ้ำ
+  [x] PUT    /api/auth/me                       แก้ไขชื่อ เบอร์ รูปโปรไฟล์
+  [x] PUT    /api/admin/posts/:id/hide          Admin ซ่อนโพสต์
+  [x] DELETE /api/admin/reviews/:id             Admin ลบรีวิว
+  [x] POST   /api/reports                       ผู้ใช้แจ้งปัญหา
+  [x] GET    /api/reports/my                    เรื่องที่ตัวเองเคยแจ้ง
+
+  ตัดออกจากขอบเขตแล้ว ไม่ต้องทำ
+  [-] POST   /api/auth/forgot-password          ตัดระบบลืมรหัสผ่านออกทั้งหมด
+  [-] POST   /api/auth/reset-password           ถ้าผู้ใช้ลืมรหัส ให้ Admin ตั้งใหม่ให้
+
+--------------------------------------------------------------------------------
+5.2  Backend - ตัวจับเวลาปิดการจองหมดอายุ (ข้อค้าง 6)  -> ทำเสร็จแล้ว
+--------------------------------------------------------------------------------
+  ไฟล์ : backend/src/jobs/expireReservationsJob.ts
+  เรียกใช้ : backend/server.ts (หลังเชื่อมฐานข้อมูลสำเร็จ)
+  ความถี่ : ทุก 5 นาที
+
+  *** ทำไมใช้ setInterval ไม่ใช้ node-cron ***
+  setInterval มากับ Node อยู่แล้ว ไม่ต้องลงแพ็กเกจเพิ่ม
+  แพ็กเกจยิ่งน้อย เพื่อนในทีมยิ่งติดตั้งง่าย โอกาสพังตอนส่งงานยิ่งน้อย
+  งานระดับ "เช็คทุก 5 นาที" ไม่ต้องใช้ความสามารถของ cron เลย
+
+  สิ่งที่โค้ดกันไว้ให้แล้ว
+      - ตัวแปร running กันไม่ให้รอบใหม่เริ่มทับรอบเก่าที่ยังไม่เสร็จ
+      - try/catch ครอบไว้ ถ้าฐานข้อมูลล่มชั่วคราว server ไม่ตายตาม
+      - timer.unref() ทำให้กด Ctrl+C แล้วปิดได้ทันที ไม่ต้องรอครบรอบ
+      - รันทันที 1 รอบตอนเปิด server เผื่อปิดไปนานแล้วมีของค้างเยอะ
+
+  ยังมีปุ่มกดเรียกเองอยู่ที่หน้า "การจอง" ใน Admin Web
+  ไว้ใช้ตอนทดสอบ จะได้ไม่ต้องนั่งรอครบ 5 นาที
+
+--------------------------------------------------------------------------------
+5.3  Mobile - เขียนครบทุกหน้าแล้ว (28 หน้า)
+--------------------------------------------------------------------------------
+
+  *** ไม่เหลือหน้าที่เป็นโครงเปล่าแล้ว ***
+  วงจรหลักทำได้ครบ : ลงขาย -> ลูกค้าเห็น -> จอง -> ได้ QR -> ร้านสแกน -> ปิดการจอง
+  รวมถึงค้นหา แผนที่ ตัวกรอง รีวิว แจ้งเตือน และการแก้ไขข้อมูลทั้งของร้านและของลูกค้า
+
+  งานที่เหลือของฝั่งแอป
+  [ ] ใส่ Google Maps API Key ในไฟล์ mobile/.env
+      ระบบใส่คีย์เตรียมไว้ให้แล้ว ดูขั้นตอนในไฟล์ 02 หัวข้อขั้นที่ 5
+  [ ] หน้า "รีวิวของฉัน" ฝั่งลูกค้า  API พร้อมแล้วที่ GET /api/reviews/my
+
+  [x] หน้าแจ้งปัญหา  เขียนเสร็จแล้ว (ReportScreen)
+      เข้าได้จากหน้ารายละเอียดร้าน และหน้ารายละเอียดการจอง
+  [-] ระบบลืมรหัสผ่าน  ตัดออกจากขอบเขตแล้ว
+
+  *** เขียนหน้าใหม่ให้ลอกโครงจากหน้าที่เสร็จแล้ว ***
+    หน้าแบบรายการ + ดึงลงรีเฟรช    ->  ลอก SellerFoodListScreen.tsx
+    หน้าแบบฟอร์ม + อัปโหลดรูป       ->  ลอก SellerEditStoreScreen.tsx
+    หน้าแบบรายละเอียด               ->  ลอก ReservationDetailScreen.tsx
+    หน้าที่ต้องค้นหาแบบพิมพ์ไปค้นไป ->  ลอก SearchScreen.tsx (มี debounce ให้ดูแล้ว)
+
+--------------------------------------------------------------------------------
+5.4  Admin Web - เขียนครบทุกหน้าแล้ว
+--------------------------------------------------------------------------------
+  [x] LoginPage             เข้าสู่ระบบ (เฉพาะ admin)
+  [x] DashboardPage         ตัวเลขสรุป 8 ตัว
+  [x] PendingStoresPage     อนุมัติร้านค้า
+  [x] StoreListPage         ร้านทั้งหมด + ระงับร้าน
+  [x] CustomerListPage      ลูกค้าทั้งหมด + ระงับบัญชี
+  [x] PostListPage          โพสต์ทั้งหมด + ปุ่มซ่อน/เอากลับมาแสดง
+  [x] ReservationListPage   การจองทั้งหมด + ปุ่มปิดการจองที่หมดอายุ
+  [x] ReviewListPage        รีวิวทั้งหมด + ปุ่มลบรีวิว
+  [x] ReportListPage        เรื่องร้องเรียน + เปลี่ยนสถานะ
+  [x] BehaviorPage          คะแนนความประพฤติ + ปรับคะแนน
+
+  งานที่เหลือของฝั่ง Admin
+  [ ] ปุ่ม "ปลดระงับร้าน" ในหน้า StoreListPage (รอ endpoint จาก Backend)
+  [ ] ใส่การแบ่งหน้าในตาราง ตอนนี้ดึงมา 100 แถวแล้วกรองในเบราว์เซอร์
+
+  *** เขียนหน้า Admin ใหม่ให้ลอกโครงจากหน้าที่เสร็จแล้ว ***
+    หน้าแบบดูอย่างเดียว + ตัวกรอง      ->  ลอก PostListPage.tsx
+    หน้าแบบมีปุ่มสั่งงาน + ยืนยันก่อนทำ ->  ลอก ReportListPage.tsx
+    จัดรูปแบบวันเวลา/ราคา              ->  ใช้ src/utils/format.ts อย่าเขียนเอง
+
+--------------------------------------------------------------------------------
+5.5  งานอื่น ๆ
+--------------------------------------------------------------------------------
+  [x] เตรียมไฟล์ใน mobile/assets/ (logo, ไอคอน, รูป default)
+      สร้างขึ้นชั่วคราวด้วยสีจากธีม ใช้ส่งงานได้ แต่ถ้ามีของออกแบบเองให้แทนที่
+  [x] ฟอนต์ Prompt  ติดตั้งผ่าน @expo-google-fonts/prompt แล้ว ไม่ต้องโหลดไฟล์เอง
+
+  [ ] ขอ Google Maps API Key แล้วใส่ในไฟล์ mobile/.env (ดูไฟล์ 02 ขั้นที่ 5)
+  [ ] ลบกล่อง "บัญชีทดสอบ" ออกจาก LoginScreen.tsx และ LoginPage.tsx ก่อนส่งงาน
+  [ ] เปลี่ยน JWT_SECRET ใน .env เป็นข้อความสุ่มยาว ๆ
+  [ ] ทดสอบทั้งระบบตามแผนในไฟล์ 06
+
+
+================================================================================
+ส่วนที่ 6 : ตัวอย่างโค้ดที่ใช้บ่อย (ก็อปไปแก้ได้เลย)
+================================================================================
+
+--------------------------------------------------------------------------------
+6.1  เรียก API ในหน้าจอมือถือ
+--------------------------------------------------------------------------------
+
+    import { useEffect, useState } from 'react';
+    import type { FeedItem } from '@shared/index';
+    import feedService from '../feedService';
+    import { errorMessage } from '../../../core/services/apiClient';
+    import LoadingView from '../../../components/LoadingView';
+    import EmptyState from '../../../components/EmptyState';
+    import type { CustomerScreenProps } from '../../../navigation/types';
+
+    // ระบุชื่อหน้าจอ -> TypeScript จะรู้เองว่า route.params มีอะไรบ้าง
+    type Props = CustomerScreenProps<'PostDetail'>;
+
+    export default function PostDetailScreen({ route }: Props): JSX.Element {
+      const { postId } = route.params;   // <- รู้เลยว่าเป็น number
+
+      const [data, setData] = useState<FeedItem | null>(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState<string | null>(null);
+
+      useEffect(() => {
+        void (async () => {
+          try {
+            setData(await feedService.getPost(postId));
+          } catch (err) {
+            setError(errorMessage(err));   // err เป็นชนิด unknown ต้องแปลงก่อน
+          } finally {
+            setLoading(false);
+          }
+        })();
+      }, [postId]);
+
+      if (loading) return <LoadingView />;
+      if (error !== null) return <EmptyState title="โหลดข้อมูลไม่สำเร็จ" message={error} />;
+      if (data === null) return <EmptyState title="ไม่พบข้อมูล" />;
+
+      // ตรงนี้ TypeScript มั่นใจแล้วว่า data ไม่ใช่ null
+      return <Text>{data.food_name}</Text>;
+    }
+
+--------------------------------------------------------------------------------
+6.2  ส่งข้อมูลพร้อมรูปภาพ
+--------------------------------------------------------------------------------
+
+    import * as ImagePicker from 'expo-image-picker';
+    import type { ApiResponse, Food, CreateFoodRequest } from '@shared/index';
+    import { uploadRequest } from '../../../core/services/apiClient';
+    import type { PickedImage } from '../../../core/services/apiClient';
+    import { ENDPOINTS } from '../../../core/constants/apiConstants';
+
+    async function pickImage(): Promise<PickedImage | null> {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+      });
+      if (result.canceled) return null;
+
+      const asset = result.assets[0];
+      if (asset === undefined) return null;
+
+      return {
+        uri: asset.uri,
+        name: asset.fileName ?? 'photo.jpg',
+        type: asset.mimeType ?? 'image/jpeg',
+      };
+    }
+
+    async function saveFood(form: CreateFoodRequest, image: PickedImage | null) {
+      return uploadRequest<ApiResponse<Food>>(ENDPOINTS.FOODS, {
+        name: form.name,
+        description: form.description,
+        normalPrice: form.normalPrice,
+        categoryId: form.categoryId,
+      }, image);
+    }
+
+--------------------------------------------------------------------------------
+6.3  สแกน QR แล้วส่งไปตรวจที่ Backend (กฎเหล็กข้อ 4)
+--------------------------------------------------------------------------------
+
+    import { useState } from 'react';
+    import { CameraView, useCameraPermissions } from 'expo-camera';
+    import type { ApiResponse, ReservationDetail, VerifyReservationRequest } from '@shared/index';
+    import { apiPost, errorMessage } from '../../core/services/apiClient';
+    import { ENDPOINTS } from '../../core/constants/apiConstants';
+
+    interface ScanResult {
+      ok: boolean;
+      message: string;
+      reservation?: ReservationDetail;
+    }
+
+    export default function ScanQrScreen(): JSX.Element {
+      const [permission, requestPermission] = useCameraPermissions();
+      const [scanned, setScanned] = useState(false);
+      const [result, setResult] = useState<ScanResult | null>(null);
+
+      async function handleScan(data: string): Promise<void> {
+        if (scanned) return;      // กันสแกนซ้ำรัว ๆ
+        setScanned(true);
+
+        try {
+          // *** ห้ามตัดสินเองว่า QR ถูก ต้องส่งไปถาม Backend เสมอ ***
+          const body: VerifyReservationRequest = { qrPayload: data };
+          const res = await apiPost<ApiResponse<ReservationDetail>>(
+            ENDPOINTS.VERIFY_RESERVATION, body
+          );
+          setResult({ ok: true, message: res.message, reservation: res.data });
+        } catch (err) {
+          setResult({ ok: false, message: errorMessage(err) });
+        }
+      }
+
+      if (permission?.granted !== true) {
+        // แสดงปุ่มขอสิทธิ์กล้อง แล้วเรียก requestPermission()
+      }
+
+      return (
+        <CameraView
+          style={{ flex: 1 }}
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          onBarcodeScanned={scanned ? undefined : ({ data }) => { void handleScan(data); }}
+        />
+      );
+    }
+
+--------------------------------------------------------------------------------
+6.4  แสดง QR Code ให้ลูกค้า
+--------------------------------------------------------------------------------
+
+    import QRCode from 'react-native-qrcode-svg';
+    import type { ReservationDetail } from '@shared/index';
+    import { theme } from '../../../core/theme/theme';
+
+    // reservation.qr_payload คือค่าที่ Backend ส่งมาให้แล้ว
+    // หน้าตาประมาณ  "SAVEEATS:a1b2c3d4..."
+
+    <QRCode
+      value={reservation.qr_payload}
+      size={220}
+      color={theme.colors.textPrimary}
+      backgroundColor={theme.colors.surface}
+    />
+
+--------------------------------------------------------------------------------
+6.5  เพิ่ม endpoint ใหม่ที่ Backend (ทำ 6 ขั้น)
+--------------------------------------------------------------------------------
+
+    ตัวอย่าง : เพิ่ม PUT /api/auth/profile
+
+    1) shared/src/dto.ts  - ประกาศหน้าตาข้อมูลที่ส่งเข้ามา
+
+           export interface UpdateProfileRequest {
+             name?: string;
+             phone?: string;
+           }
+
+    2) models/userModel.ts   - มีฟังก์ชัน updateProfile อยู่แล้ว ใช้ได้เลย
+
+    3) services/authService.ts - เพิ่มฟังก์ชัน
+
+           async updateProfile(
+             userId: number,
+             input: UpdateProfileRequest & { avatar?: string }
+           ): Promise<PublicUser> {
+             const user = await userModel.updateProfile(userId, input);
+             if (!user) throw ApiError.notFound('ไม่พบบัญชีผู้ใช้นี้');
+             return toPublicUser(user);
+           },
+
+    4) controllers/authController.ts - เพิ่ม
+
+           async updateProfile(req: Request, res: Response): Promise<void> {
+             const user = requireAuth(req);
+             const body = req.body as UpdateProfileRequest;
+             const updated = await authService.updateProfile(user.userId, {
+               ...body,
+               avatar: uploadedFilename(req),
+             });
+             ok(res, updated, 'บันทึกข้อมูลเรียบร้อยแล้ว');
+           },
+
+    5) validators/authValidator.ts - เพิ่มกฎการตรวจ (ชนิด ValidationChain[])
+
+    6) routes/authRoutes.ts - เพิ่มเส้นทาง
+
+           router.put('/profile', authMiddleware,
+             imageUploader('profile', 'image'),
+             updateProfileRules, validate,
+             asyncHandler(authController.updateProfile));
+
+    *** ห้ามเขียน SQL ใน controller หรือ service ***
+    *** ห้ามเขียน Logic ใน controller ***
+    *** ห้ามประกาศ interface ของ request/response ในไฟล์ controller ***
+        ให้ประกาศที่ shared/src/dto.ts เสมอ เพื่อให้ฝั่งแอปใช้ตัวเดียวกันได้
+
+--------------------------------------------------------------------------------
+6.6  ทำหน้าใหม่ใน Admin Web
+--------------------------------------------------------------------------------
+
+    import { useCallback, useEffect, useState } from 'react';
+    import type { Report } from '@shared/index';
+    import Header from '../../components/Header';
+    import DataTable from '../../components/DataTable';
+    import type { Column } from '../../components/DataTable';
+    import StatusBadge from '../../components/StatusBadge';
+    import adminService from '../../services/adminService';
+    import { errorMessage } from '../../services/apiClient';
+
+    export default function ReportListPage(): JSX.Element {
+      const [rows, setRows] = useState<Report[]>([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState('');
+
+      const load = useCallback(async (): Promise<void> => {
+        setLoading(true);
+        try {
+          const res = await adminService.getReports({ limit: 100 });
+          setRows(res.data);
+        } catch (err) {
+          setError(errorMessage(err));
+        } finally {
+          setLoading(false);
+        }
+      }, []);
+
+      useEffect(() => { void load(); }, [load]);
+
+      // ระบุ Column<Report> -> ตอนเขียน row.xxx จะได้ autocomplete
+      const columns: Array<Column<Report>> = [
+        { key: 'reason', title: 'เหตุผล' },
+        { key: 'status', title: 'สถานะ', render: (row) => <StatusBadge status={row.status} /> },
+      ];
+
+      return (
+        <>
+          <Header title="การแจ้งปัญหา" subtitle="จัดการเรื่องร้องเรียนจากผู้ใช้" />
+          {error ? <div className="alert alert-error"><span>{error}</span></div> : null}
+          <DataTable<Report> columns={columns} rows={rows} rowKey="report_id" loading={loading} />
+        </>
+      );
+    }
+
+--------------------------------------------------------------------------------
+6.7  เพิ่มหน้าจอใหม่ในแอปมือถือ (ทำ 2 ขั้น)
+--------------------------------------------------------------------------------
+
+    1) mobile/src/navigation/types.ts - บอกว่าหน้านี้รับ parameter อะไร
+
+           export type CustomerStackParamList = {
+             ...
+             MyNewScreen: { itemId: number };   // ไม่มี parameter ให้ใส่ undefined
+           };
+
+    2) mobile/src/navigation/RootNavigator.tsx - เพิ่ม <Stack.Screen>
+
+    จากนั้นเวลาเรียกจากหน้าอื่นจะได้ความช่วยเหลือเต็มที่
+           navigation.navigate('MyNewScreen', { itemId: 5 });   // ผ่าน
+           navigation.navigate('MyNewScreen', { itemid: 5 });   // ฟ้องทันที
+           navigation.navigate('MyNewScreen');                  // ฟ้องว่าขาด parameter
+
+
+================================================================================
+
+ส่วนที่ 7 : วิธีทดสอบ API ด้วย Thunder Client
+================================================================================
+
+  1. ติดตั้ง Extension "Thunder Client" ใน VS Code
+  2. กดไอคอนรูปสายฟ้าทางซ้าย
+  3. กด New Request
+
+  ตัวอย่าง : ทดสอบ Login
+      Method  : POST
+      URL     : http://localhost:3000/api/auth/login
+      แท็บ Body -> เลือก JSON แล้วใส่
+
+          {
+            "email": "admin@saveeats.com",
+            "password": "123456"
+          }
+
+      กด Send  ->  คัดลอกค่า token ที่ได้เก็บไว้
+
+  ตัวอย่าง : ทดสอบ API ที่ต้อง Login
+      Method  : GET
+      URL     : http://localhost:3000/api/admin/dashboard
+      แท็บ Headers -> เพิ่ม
+
+          Authorization : Bearer <วาง token ที่คัดลอกมา>
+
+      กด Send
+
+  ทดสอบว่าระบบสิทธิ์ทำงานจริงไหม
+      1. Login ด้วย customer1@test.com เอา token มา
+      2. เอา token นั้นไปยิง GET /api/admin/dashboard
+      3. ต้องได้ 403 Forbidden พร้อมข้อความ "คุณไม่มีสิทธิ์เข้าถึงส่วนนี้"
+         ถ้าได้ข้อมูลกลับมา แปลว่ามีช่องโหว่ ต้องแก้ทันที
+
+
+================================================================================
+                                จบเอกสาร
+================================================================================

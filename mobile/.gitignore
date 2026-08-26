@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.DS_Store
+
+# ---- ไฟล์ลับ ห้ามขึ้น Git เด็ดขาด (กฎเหล็กข้อ 6) ----
+# มี Google Maps API Key อยู่ข้างใน ถ้าหลุดขึ้น GitHub คนอื่นเอาไปใช้ได้
+# และ Google จะเรียกเก็บเงินจากเจ้าของคีย์
+.env
+.env.local
+.env.*.local

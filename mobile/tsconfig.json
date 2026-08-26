@@ -1,0 +1,32 @@
+{
+  "//": "expo/tsconfig.base ตั้งค่าพื้นฐานของ React Native ให้แล้ว เราเพิ่มความเข้มงวดทับลงไป",
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    /* ----- ทางลัดของ path ให้เขียน @shared/index ได้ ----- */
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../shared/src/*"]
+    },
+
+    /* ----- ความเข้มงวด (เปิดเต็มที่ ตรงกับ backend และ admin-web) ----- */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "App.tsx",
+    "app.config.ts",
+    "types/**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../shared/src/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
