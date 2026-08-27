@@ -16,7 +16,7 @@
  *       PUT    /api/notifications/read-all
  *       DELETE /api/notifications/:id
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, SectionList, TouchableOpacity, StyleSheet, RefreshControl, Alert,
 } from 'react-native';
@@ -32,6 +32,7 @@ import EmptyState from '../../../components/EmptyState';
 import notificationService from '../../../core/services/notificationService';
 import { errorMessage } from '../../../core/services/apiClient';
 import { useAuth } from '../../../context/AuthContext';
+import { useBadges } from '../../../context/BadgeContext';
 import { formatRelativeTime } from '../../../core/utils/formatters';
 import { theme } from '../../../core/theme/theme';
 import type { CustomerStackParamList } from '../../../navigation/types';
@@ -78,6 +79,7 @@ function dayLabel(value: string): string {
 export default function NotificationScreen(): JSX.Element {
   const navigation = useNavigation<Navigation>();
   const { isSeller } = useAuth();
+  const { setUnreadNotifications } = useBadges();
 
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,15 +107,24 @@ export default function NotificationScreen(): JSX.Element {
     return Array.from(groups, ([title, data]) => ({ title, data }));
   }, [items]);
 
+  /*
+   * เก็บจำนวนที่ยังไม่อ่าน "ล่าสุด" ไว้ใน ref
+   * เพราะ handlePress อ่านค่าจาก state ตรง ๆ ไม่ได้ (ค่าจะเป็นของรอบ render ก่อนหน้า
+   * ถ้าผู้ใช้กดรัว ๆ หลายรายการติดกัน จุดแดงจะลดแค่ครั้งเดียว)
+   */
+  const unreadCountRef = useRef(0);
+
   const load = useCallback(async (): Promise<void> => {
     try {
       setError(null);
       const res = await notificationService.list(1, 50);
       setItems(res.data);
+      // เอาจำนวนที่ยังไม่อ่านจากชุดที่เพิ่งโหลดมาอัปจุดแดงเลย ไม่ต้องยิง API ซ้ำอีกเส้น
+      setUnreadNotifications(res.data.filter((n) => !n.is_read).length);
     } catch (err) {
       setError(errorMessage(err));
     }
-  }, []);
+  }, [setUnreadNotifications]);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,6 +147,7 @@ export default function NotificationScreen(): JSX.Element {
   async function handleReadAll(): Promise<void> {
     // อัปเดตหน้าจอทันทีไม่ต้องรอ server ตอบ ผู้ใช้จะรู้สึกว่าแอปไว
     setItems((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+    setUnreadNotifications(0);
     try {
       await notificationService.markAllRead();
     } catch {
@@ -150,6 +162,8 @@ export default function NotificationScreen(): JSX.Element {
       setItems((prev) =>
         prev.map((n) => (n.notification_id === item.notification_id ? { ...n, is_read: 1 } : n))
       );
+      // ลดจุดแดงลงทีละ 1 ทันที (กันติดลบด้วย Math.max เผื่อกดรัว ๆ)
+      setUnreadNotifications(Math.max(0, unreadCountRef.current - 1));
       void notificationService.markRead(item.notification_id).catch(() => undefined);
     }
 
@@ -191,6 +205,8 @@ export default function NotificationScreen(): JSX.Element {
   }
 
   const unreadCount = items.filter((n) => !n.is_read).length;
+  // ให้ ref ตามหลัง state เสมอ handlePress จะได้อ่านค่าที่เป็นปัจจุบันจริง ๆ
+  unreadCountRef.current = unreadCount;
 
   if (loading) return <LoadingView message="กำลังโหลดการแจ้งเตือน..." />;
 

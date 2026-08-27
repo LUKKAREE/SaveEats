@@ -42,6 +42,7 @@ import { errorMessage } from '../../../core/services/apiClient';
 import { imageUrl } from '../../../core/constants/apiConstants';
 import { formatPrice, formatPickupRange, formatTimeLeft } from '../../../core/utils/formatters';
 import { theme } from '../../../core/theme/theme';
+import { useBadges } from '../../../context/BadgeContext';
 import type { CustomerStackParamList } from '../../../navigation/types';
 
 type Navigation = NativeStackNavigationProp<CustomerStackParamList>;
@@ -77,6 +78,9 @@ export default function ReservationHistoryScreen(): JSX.Element {
    */
   const hasItems = useRef(false);
 
+  // ตัวเลขบนแท็บ "การจอง" ต้องขยับตามหลังทุกครั้งที่รายการเปลี่ยน (จอง / ยกเลิก / ร้านสแกนแล้ว)
+  const { refresh: refreshBadges } = useBadges();
+
   /** ยิง API อย่างเดียว ไม่ยุ่งกับ state อื่น คืน null ถ้าพลาด */
   const fetchList = useCallback(
     async (status: ReservationStatus | ''): Promise<ReservationDetail[] | null> => {
@@ -91,11 +95,15 @@ export default function ReservationHistoryScreen(): JSX.Element {
   );
 
   /** เอาผลลัพธ์ที่ได้ลงจอ พร้อมจำไว้ว่าตอนนี้มีของอยู่หรือเปล่า */
-  const apply = useCallback((list: ReservationDetail[] | null): void => {
-    const next = list ?? [];
-    hasItems.current = next.length > 0;
-    setItems(next);
-  }, []);
+  const apply = useCallback(
+    (list: ReservationDetail[] | null): void => {
+      const next = list ?? [];
+      hasItems.current = next.length > 0;
+      setItems(next);
+      void refreshBadges();
+    },
+    [refreshBadges]
+  );
 
   // useFocusEffect = โหลดใหม่ทุกครั้งที่กลับมาที่แท็บนี้
   // จำเป็นมาก เพราะพอร้านสแกน QR เสร็จ สถานะจะเปลี่ยนเป็น completed

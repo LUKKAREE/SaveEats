@@ -15,6 +15,7 @@ import FavoriteStoresScreen from '../features/favorite/screens/FavoriteStoresScr
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
 
 import { theme } from '../core/theme/theme';
+import { useBadges, badgeLabel } from '../context/BadgeContext';
 import type { CustomerTabParamList } from './types';
 
 /*
@@ -45,6 +46,7 @@ const ICONS: Record<keyof CustomerTabParamList, { active: keyof typeof Ionicons.
 
 export default function CustomerTabs(): JSX.Element {
   const insets = useSafeAreaInsets();
+  const { pendingReservations } = useBadges();
 
   return (
     <Tab.Navigator
@@ -61,6 +63,20 @@ export default function CustomerTabs(): JSX.Element {
           borderTopColor: theme.colors.border,
         },
         tabBarLabelStyle: { fontSize: 11, fontFamily: theme.fonts.medium },
+        /*
+         * หน้าตาของจุดแดงบนแท็บ
+         * ต้องกำหนดเอง เพราะสีตั้งต้นของ React Navigation เป็นแดงคนละเฉดกับ theme ของแอป
+         */
+        tabBarBadgeStyle: {
+          backgroundColor: theme.colors.error,
+          color: theme.colors.textOnPrimary,
+          fontSize: 10,
+          fontFamily: theme.fonts.bold,
+          minWidth: 18,
+          height: 18,
+          lineHeight: 18,
+          borderRadius: 9,
+        },
         tabBarIcon: ({ focused, color, size }) => {
           const config = ICONS[route.name];
           return <Ionicons name={focused ? config.active : config.inactive} size={size} color={color} />;
@@ -72,7 +88,19 @@ export default function CustomerTabs(): JSX.Element {
       <Tab.Screen
         name="ReservationHistory"
         component={ReservationHistoryScreen}
-        options={{ title: 'การจอง' }}
+        options={{
+          title: 'การจอง',
+          /*
+           * นับเฉพาะการจองที่ยัง "ต้องไปรับ"
+           * ตัวเลขบนแท็บควรหมายถึงงานที่ผู้ใช้ยังต้องทำ ไม่ใช่จำนวนรายการทั้งหมด
+           * ส่ง undefined เมื่อเป็น 0 เพื่อให้จุดแดงหายไปเลย (ถ้าส่ง 0 จะขึ้นวงกลมเลข 0 ค้างไว้)
+           */
+          tabBarBadge: pendingReservations > 0 ? badgeLabel(pendingReservations) : undefined,
+          tabBarAccessibilityLabel:
+            pendingReservations > 0
+              ? `การจอง มี ${pendingReservations} รายการที่ต้องไปรับ`
+              : 'การจอง',
+        }}
       />
       <Tab.Screen name="Favorites" component={FavoriteStoresScreen} options={{ title: 'ร้านโปรด' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'ฉัน' }} />

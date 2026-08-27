@@ -16,7 +16,7 @@ import {
   View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Category, FeedItem } from '@shared/index';
 
@@ -34,6 +34,7 @@ import { theme } from '../../../core/theme/theme';
 import { PAGE_SIZE } from '../../../core/constants/appConstants';
 import { useAuth } from '../../../context/AuthContext';
 import { useFilter } from '../../../context/FilterContext';
+import { useBadges, badgeLabel } from '../../../context/BadgeContext';
 import type { CustomerStackParamList } from '../../../navigation/types';
 
 /**
@@ -54,6 +55,9 @@ export default function HomeScreen(): JSX.Element {
 
   // ตัวกรองเก็บไว้ใน Context เพราะหน้า FilterScreen เป็นคนแก้ค่า (คนละหน้าจอกัน)
   const { filters, setFilters, activeCount } = useFilter();
+
+  // ตัวเลขจุดแดงบนกระดิ่ง อยู่ใน Context เพราะแท็บล่างก็ใช้ก้อนเดียวกัน
+  const { unreadNotifications, refresh: refreshBadges } = useBadges();
 
   const [posts, setPosts] = useState<FeedItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -158,6 +162,16 @@ export default function HomeScreen(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
+  /*
+   * กลับเข้าหน้านี้เมื่อไหร่ก็นับจุดแดงใหม่
+   * เคสสำคัญคือกลับมาจากหน้าแจ้งเตือน ถ้าไม่นับใหม่จุดแดงจะค้างทั้งที่อ่านไปแล้ว
+   */
+  useFocusEffect(
+    useCallback(() => {
+      void refreshBadges();
+    }, [refreshBadges])
+  );
+
   function handleSelectCategory(categoryId: number | null): void {
     // กดหมวดเดิมซ้ำ = ยกเลิกการกรองหมวดนั้น
     setFilters({ categoryId: filters.categoryId === categoryId ? null : categoryId });
@@ -179,9 +193,19 @@ export default function HomeScreen(): JSX.Element {
         <TouchableOpacity
           style={styles.iconButton}
           onPress={() => navigation.navigate('Notifications')}
-          accessibilityLabel="การแจ้งเตือน"
+          accessibilityLabel={
+            unreadNotifications > 0
+              ? `การแจ้งเตือน มี ${unreadNotifications} รายการที่ยังไม่ได้อ่าน`
+              : 'การแจ้งเตือน'
+          }
         >
           <Ionicons name="notifications-outline" size={22} color={theme.colors.textPrimary} />
+          {/* จุดแดงบอกจำนวนแจ้งเตือนที่ยังไม่ได้อ่าน เกิน 9 แสดงเป็น 9+ */}
+          {unreadNotifications > 0 ? (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>{badgeLabel(unreadNotifications)}</Text>
+            </View>
+          ) : null}
         </TouchableOpacity>
       </View>
 
@@ -357,6 +381,27 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: theme.colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    /* ขอบสีพื้นหลังทำให้จุดแดงไม่ติดกับไอคอนจนดูเลอะเมื่อเลขยาว */
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+  },
+  notificationBadgeText: {
+    color: theme.colors.textOnPrimary,
+    fontSize: 10,
+    fontFamily: theme.fonts.bold,
+  },
+
   filterBadge: {
     position: 'absolute',
     top: -4,

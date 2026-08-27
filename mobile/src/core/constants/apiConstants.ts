@@ -22,7 +22,7 @@
  */
 
 // <<<< แก้เลข IP ตรงนี้ >>>>
-const DEV_HOST = '10.1.195.195';
+const DEV_HOST = '192.168.10.79';
 const DEV_PORT = 3000;
 
 export const BASE_URL = `http://${DEV_HOST}:${DEV_PORT}`;

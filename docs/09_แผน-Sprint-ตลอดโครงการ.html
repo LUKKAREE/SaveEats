@@ -1,0 +1,498 @@
+<title>แผน Sprint SaveEats</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --paper:      #F7F8F5;
+    --surface:    #FFFFFF;
+    --surface-2:  #F0F3EE;
+    --ink:        #17211C;
+    --ink-2:      #3E4B44;
+    --muted:      #6E7C74;
+    --line:       #DFE5DC;
+    --line-soft:  #EBEFE8;
+    --accent:     #16A34A;
+    --accent-deep:#15803D;
+    --accent-wash:#E8F6ED;
+    --done:       #16A34A;
+    --active:     #D97706;
+    --active-wash:#FDF3E3;
+    --planned:    #8C9A92;
+    --shadow:     0 1px 2px rgba(23,33,28,.06), 0 8px 24px -14px rgba(23,33,28,.22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #101613;
+      --surface:    #17201C;
+      --surface-2:  #1E2A24;
+      --ink:        #E9EFEA;
+      --ink-2:      #BCC8C1;
+      --muted:      #8A9891;
+      --line:       #2B3A32;
+      --line-soft:  #223029;
+      --accent:     #3DD37E;
+      --accent-deep:#7BE3A8;
+      --accent-wash:#16301F;
+      --done:       #3DD37E;
+      --active:     #F0B44A;
+      --active-wash:#33260F;
+      --planned:    #6B7A72;
+      --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #101613;
+    --surface:    #17201C;
+    --surface-2:  #1E2A24;
+    --ink:        #E9EFEA;
+    --ink-2:      #BCC8C1;
+    --muted:      #8A9891;
+    --line:       #2B3A32;
+    --line-soft:  #223029;
+    --accent:     #3DD37E;
+    --accent-deep:#7BE3A8;
+    --accent-wash:#16301F;
+    --done:       #3DD37E;
+    --active:     #F0B44A;
+    --active-wash:#33260F;
+    --planned:    #6B7A72;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Sarabun", system-ui, -apple-system, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.68;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 40px 22px 90px; }
+
+  h1, h2, h3, .display { font-family: "Prompt", "Sarabun", sans-serif; text-wrap: balance; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ---------- หัวเอกสาร ---------- */
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 22px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-deep); font-weight: 500; margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(30px, 5.2vw, 44px); font-weight: 700; line-height: 1.15; margin: 0 0 8px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 15px; margin: 0; }
+
+  /* ---------- แถบตัวเลขสรุป ---------- */
+  .facts {
+    display: grid; gap: 1px; background: var(--line);
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+    margin: 26px 0 44px;
+  }
+  .fact { background: var(--surface); padding: 16px 18px; }
+  .fact dt {
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 6px;
+  }
+  .fact dd { margin: 0; font-family: "Prompt", sans-serif; font-size: 21px; font-weight: 600; line-height: 1.2; }
+  .fact dd small { display: block; font-size: 12.5px; font-weight: 400; color: var(--muted); font-family: "Sarabun", sans-serif; }
+
+  section { margin-bottom: 52px; }
+  h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 18px; padding-bottom: 9px; border-bottom: 1px solid var(--line);
+  }
+
+  /* ---------- ทีม ---------- */
+  .roster { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); }
+  .member {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .member .code {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 600;
+    color: var(--accent-deep); letter-spacing: .08em;
+  }
+  .member .role { font-family: "Prompt", sans-serif; font-weight: 600; font-size: 15px; margin: 3px 0 4px; }
+  .member .duty { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ---------- Epic ---------- */
+  .epics { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .epic {
+    display: flex; gap: 11px; align-items: baseline;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 11px 14px; font-size: 14px;
+  }
+  .epic .id { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600; color: var(--accent-deep); flex: none; }
+
+  /* ---------- ไทม์ไลน์ Sprint ---------- */
+  .sprint {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .sprint.current { border-color: var(--accent); border-width: 1.5px; }
+
+  .sprint-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px;
+    padding: 16px 20px; border-bottom: 1px solid var(--line-soft);
+    background: var(--surface-2);
+  }
+  .sprint.current .sprint-head { background: var(--accent-wash); }
+  .sprint-no {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; color: var(--accent-deep);
+  }
+  .sprint-dates { font-family: "IBM Plex Mono", monospace; font-size: 13.5px; font-weight: 500; }
+  .sprint-goal { font-family: "Prompt", sans-serif; font-weight: 600; font-size: 15.5px; flex-basis: 100%; margin-top: 2px; }
+  .chip {
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600;
+    letter-spacing: .07em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .chip.now  { background: var(--accent); color: #FFF; }
+  .chip.done { background: transparent; color: var(--done); border: 1px solid var(--done); }
+  .chip.next { background: transparent; color: var(--planned); border: 1px solid var(--line); }
+
+  .review {
+    display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline;
+    padding: 11px 20px; border-bottom: 1px solid var(--line-soft);
+    font-size: 13.5px; color: var(--ink-2);
+  }
+  .review b { font-family: "Prompt", sans-serif; font-weight: 600; color: var(--ink); }
+  .review .deliver { color: var(--accent-deep); font-weight: 600; }
+
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+  th {
+    text-align: left; font-family: "IBM Plex Mono", monospace; font-weight: 500;
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    padding: 10px 20px; border-bottom: 1px solid var(--line-soft);
+  }
+  td { padding: 9px 20px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.pt, th.pt { text-align: right; font-family: "IBM Plex Mono", monospace; font-weight: 500; width: 62px; }
+  td.who, th.who { white-space: nowrap; width: 92px; color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+  td.st, th.st { width: 74px; }
+  .dot { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--planned); flex: none; }
+  .dot.done::before { background: var(--done); }
+  .dot.doing::before { background: var(--active); }
+
+  .sprint-foot {
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    padding: 11px 20px; background: var(--surface-2);
+    font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--muted);
+  }
+  .sprint-foot strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- กล่องหมายเหตุ ---------- */
+  .note {
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--accent); border-radius: 8px;
+    padding: 16px 18px; margin-bottom: 12px;
+  }
+  .note h3 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+  .note p { margin: 0; font-size: 14px; color: var(--ink-2); }
+
+  ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: s; display: grid; gap: 10px; }
+  ol.steps li {
+    counter-increment: s; display: flex; gap: 13px; align-items: baseline;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 15px; font-size: 14px;
+  }
+  ol.steps li::before {
+    content: counter(s); font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600;
+    color: var(--accent-deep); flex: none; min-width: 14px;
+  }
+  code {
+    font-family: "IBM Plex Mono", monospace; font-size: .88em;
+    background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+  }
+
+  footer {
+    border-top: 1px solid var(--line); padding-top: 18px; margin-top: 8px;
+    font-size: 12.5px; color: var(--muted);
+  }
+  a { color: var(--accent-deep); }
+  a:focus-visible, li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { .sprint { transition: border-color .18s ease; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">DGT01 1130 · โครงงานวิศวกรรมซอฟต์แวร์ · ภาค 1/2569</p>
+    <h1>แผน Sprint ตลอดโครงการ — SaveEats</h1>
+    <p class="sub">แอปช่วยร้านอาหารขายของที่เหลือปลายวันในราคาลด · วางแผนด้วย SCRUM 8 Sprint ให้ตรงกับการนำเสนอความก้าวหน้าทั้ง 8 ครั้ง</p>
+  </header>
+
+  <dl class="facts">
+    <div class="fact"><dt>Sprint ทั้งหมด</dt><dd>8<small>9 ก.ค. – 16 ก.ย. 69</small></dd></div>
+    <div class="fact"><dt>สมาชิก</dt><dd>5 คน<small>แบ่ง 5 บทบาท</small></dd></div>
+    <div class="fact"><dt>Story point รวม</dt><dd>246<small>เฉลี่ย 22 ต่อสัปดาห์</small></dd></div>
+    <div class="fact"><dt>Sprint ปัจจุบัน</dt><dd>Sprint 5<small>20 – 26 ส.ค. 69</small></dd></div>
+    <div class="fact"><dt>ส่งงานคาบนี้</dt><dd>CI Pipeline<small>27 ส.ค. 69</small></dd></div>
+  </dl>
+
+  <section>
+    <h2>ทีมและบทบาท</h2>
+    <div class="roster">
+      <div class="member"><div class="code">A</div><div class="role">Product Owner</div><div class="duty">จัดลำดับงาน เอกสาร SRS ประสานอาจารย์และผู้ใช้</div></div>
+      <div class="member"><div class="code">B</div><div class="role">Backend Developer</div><div class="duty">API ฐานข้อมูล ตรรกะการจองและยืนยันรับอาหาร</div></div>
+      <div class="member"><div class="code">C</div><div class="role">Mobile — ฝั่งลูกค้า</div><div class="duty">Feed ค้นหา แผนที่ จองอาหาร รีวิว</div></div>
+      <div class="member"><div class="code">D</div><div class="role">Mobile — ฝั่งร้านค้า</div><div class="duty">จัดการร้าน คลังเมนู ลงขาย สแกน QR</div></div>
+      <div class="member"><div class="code">E</div><div class="role">QA &amp; DevOps</div><div class="duty">แผนทดสอบ SIT/UAT เว็บแอดมิน CI Pipeline</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Epic — ก้อนงานหลัก 9 ก้อน</h2>
+    <div class="epics">
+      <div class="epic"><span class="id">EP1</span><span>จัดการโครงการและเอกสาร</span></div>
+      <div class="epic"><span class="id">EP2</span><span>ฐานข้อมูลและโครงสร้างพื้นฐาน</span></div>
+      <div class="epic"><span class="id">EP3</span><span>ระบบสมาชิกและสิทธิ์</span></div>
+      <div class="epic"><span class="id">EP4</span><span>ฝั่งลูกค้า — ค้นหาและจองอาหาร</span></div>
+      <div class="epic"><span class="id">EP5</span><span>ฝั่งร้านค้า — จัดการร้านและรับออเดอร์</span></div>
+      <div class="epic"><span class="id">EP6</span><span>แผนที่และร้านใกล้เคียง</span></div>
+      <div class="epic"><span class="id">EP7</span><span>รีวิวและคะแนนความประพฤติ</span></div>
+      <div class="epic"><span class="id">EP8</span><span>เว็บผู้ดูแลระบบ</span></div>
+      <div class="epic"><span class="id">EP9</span><span>คุณภาพ CI/CD และการทดสอบ</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>ไทม์ไลน์ 8 Sprint</h2>
+
+    <!-- Sprint 1 -->
+    <article class="sprint">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 1</span>
+        <span class="sprint-dates">9 – 15 ก.ค. 69</span>
+        <span class="chip done">เสร็จแล้ว</span>
+        <div class="sprint-goal">กำหนดหัวข้อ ขอบเขต และกลุ่มผู้ใช้เป้าหมาย</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 4 · 16 ก.ค. 69 — นำเสนอครั้งที่ 1 · <span class="deliver">ส่งแบบเสนอโครงงาน P01 + แผนงาน</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>ระดมหัวข้อและคัดเลือกโครงงาน</td><td class="who">A</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>สำรวจปัญหาอาหารเหลือทิ้งกับร้านและผู้บริโภค</td><td class="who">A · E</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>กำหนดผู้ใช้ 3 บทบาท: ลูกค้า / ร้านค้า / ผู้ดูแล</td><td class="who">A</td><td class="pt">2</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>เขียนแบบเสนอโครงงาน P01</td><td class="who">A · B</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ร่างแผนงานตลอดโครงการ</td><td class="who">A</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>แบ่งบทบาททีมและตั้งช่องทางสื่อสาร</td><td class="who">ทั้งทีม</td><td class="pt">2</td><td class="st"><span class="dot done">Done</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP1</span><span><strong>20</strong> point</span></div>
+    </article>
+
+    <!-- Sprint 2 -->
+    <article class="sprint">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 2</span>
+        <span class="sprint-dates">16 – 22 ก.ค. 69</span>
+        <span class="chip done">เสร็จแล้ว</span>
+        <div class="sprint-goal">เก็บความต้องการให้ครบและตามรอยได้ทุกข้อ</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 5 · 23 ก.ค. 69 — นำเสนอครั้งที่ 2 · <span class="deliver">ส่ง Requirement Traceability Matrix</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>สัมภาษณ์ร้านอาหารรอบมหาวิทยาลัย</td><td class="who">A · E</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>เขียน User Story ฝั่งลูกค้า</td><td class="who">C</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>เขียน User Story ฝั่งร้านค้า</td><td class="who">D</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>เขียน User Story ฝั่งผู้ดูแลระบบ</td><td class="who">E</td><td class="pt">2</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>จัดทำ Requirement Traceability Matrix</td><td class="who">A</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ประเมินความเป็นไปได้ทางเทคนิคและเลือกเครื่องมือ</td><td class="who">B</td><td class="pt">2</td><td class="st"><span class="dot done">Done</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP1</span><span><strong>20</strong> point</span></div>
+    </article>
+
+    <!-- Sprint 3 -->
+    <article class="sprint">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 3</span>
+        <span class="sprint-dates">23 ก.ค. – 5 ส.ค. 69</span>
+        <span class="chip done">เสร็จแล้ว</span>
+        <div class="sprint-goal">วิเคราะห์ระบบ เขียน SRS และวางฐานข้อมูล</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 6 · 6 ส.ค. 69 — นำเสนอครั้งที่ 3 · <span class="deliver">ส่ง SRS ฉบับสมบูรณ์</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>Use Case Diagram พร้อมคำบรรยายทุกเคส</td><td class="who">A</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ER Diagram และพจนานุกรมข้อมูล</td><td class="who">B</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>Context Diagram และ DFD ระดับ 0–1</td><td class="who">A</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>Sequence Diagram: จองอาหาร และยืนยันรับด้วย QR</td><td class="who">B</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>Class Diagram</td><td class="who">B</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>เขียน SRS ฉบับสมบูรณ์</td><td class="who">ทั้งทีม</td><td class="pt">8</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ตั้งโครงโปรเจค 3 ส่วน + shared types (TypeScript)</td><td class="who">E</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>สร้าง schema.sql 13 ตาราง และ seed.sql</td><td class="who">B</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP1 · EP2</span><span><strong>39</strong> point · 2 สัปดาห์</span></div>
+    </article>
+
+    <!-- Sprint 4 -->
+    <article class="sprint">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 4</span>
+        <span class="sprint-dates">6 – 19 ส.ค. 69</span>
+        <span class="chip done">เสร็จแล้ว</span>
+        <div class="sprint-goal">ออกแบบ UX/UI และพัฒนาฟีเจอร์แกนหลัก</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 8 · 20 ส.ค. 69 — นำเสนอครั้งที่ 4 · <span class="deliver">ส่ง Design Models</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>Wireframe แอปมือถือ 28 หน้า</td><td class="who">C · D</td><td class="pt">8</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>Wireframe เว็บผู้ดูแลระบบ 10 หน้า</td><td class="who">E</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>กำหนดธีมกลาง: สี ฟอนต์ ระยะห่าง ใช้ร่วม 3 ส่วน</td><td class="who">C</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>Component Diagram และ Deployment Diagram</td><td class="who">B</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>API ระบบสมาชิก JWT และตรวจสิทธิ์ตามบทบาท</td><td class="who">B</td><td class="pt">8</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>หน้าเข้าสู่ระบบ / สมัครสมาชิก บนมือถือ</td><td class="who">C</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>Feed ค้นหา และตัวกรองอาหาร</td><td class="who">C</td><td class="pt">8</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>จัดการร้าน คลังเมนู และลงขาย</td><td class="who">D</td><td class="pt">8</td><td class="st"><span class="dot done">Done</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP3 · EP4 · EP5 · EP8</span><span><strong>46</strong> point · 2 สัปดาห์ (ข้ามสัปดาห์สอบกลางภาค)</span></div>
+    </article>
+
+    <!-- Sprint 5 -->
+    <article class="sprint current">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 5</span>
+        <span class="sprint-dates">20 – 26 ส.ค. 69</span>
+        <span class="chip now">Sprint ปัจจุบัน</span>
+        <div class="sprint-goal">ตั้ง CI Pipeline และปรับปรุงระบบให้พร้อมส่งมอบ</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 9 · 27 ส.ค. 69 — นำเสนอครั้งที่ 5 · <span class="deliver">ส่ง CI Pipeline</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>ตั้ง CI Pipeline บน GitHub Actions 3 งานขนาน</td><td class="who">E</td><td class="pt">8</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ย้ายโค้ดขึ้น GitHub และตั้ง .gitignore กันไฟล์ลับ</td><td class="who">E</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>แก้บั๊ก: ของไม่คืนสต็อกเมื่อคิวหมดเวลา</td><td class="who">B</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ปรับหน้าแผนที่: แผ่นเลื่อนแนวตั้ง + ฟิลเตอร์ระยะทาง</td><td class="who">C</td><td class="pt">5</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ทำหน้า “รีวิวของฉัน” ฝั่งลูกค้า</td><td class="who">C</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>ออกแบบโลโก้ใหม่และใส่ในแอปกับเว็บแอดมิน</td><td class="who">D</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>เขียนคู่มือติดตั้งสำหรับผู้ทดสอบภายนอก</td><td class="who">A</td><td class="pt">2</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>เคลียร์ไฟล์ที่ไม่ได้ใช้ + แก้รหัสบัญชีทดสอบให้ผ่านกฎ</td><td class="who">E</td><td class="pt">3</td><td class="st"><span class="dot done">Done</span></td></tr>
+          <tr><td>วางแผนโครงการใน Jira และ export Timeline CSV</td><td class="who">A</td><td class="pt">5</td><td class="st"><span class="dot doing">กำลังทำ</span></td></tr>
+          <tr><td>จัดทำ burn-up / burn-down chart</td><td class="who">A</td><td class="pt">3</td><td class="st"><span class="dot doing">กำลังทำ</span></td></tr>
+          <tr><td>ขอ Google Maps API Key และใส่ใน .env</td><td class="who">C</td><td class="pt">2</td><td class="st"><span class="dot">To Do</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP6 · EP7 · EP9</span><span><strong>42</strong> point · เสร็จ 32 · เหลือ 10</span></div>
+    </article>
+
+    <!-- Sprint 6 -->
+    <article class="sprint">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 6</span>
+        <span class="sprint-dates">27 ส.ค. – 2 ก.ย. 69</span>
+        <span class="chip next">ถัดไป</span>
+        <div class="sprint-goal">ทดสอบการทำงานร่วมกันของทั้งสามส่วน (SIT)</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 10 · 3 ก.ย. 69 — นำเสนอครั้งที่ 6 · <span class="deliver">ส่งผล System Integration Test</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>งานค้างจาก Sprint 5 (Jira · chart · Maps key)</td><td class="who">A · C</td><td class="pt">10</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>เขียนแผนการทดสอบ SIT และเกณฑ์ผ่าน</td><td class="who">E</td><td class="pt">3</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>ทดสอบเส้นทางหลัก: จอง → สแกน QR → รีวิว</td><td class="who">E · D</td><td class="pt">5</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>ทดสอบการเชื่อมต่อ มือถือ ↔ backend ↔ เว็บแอดมิน</td><td class="who">E · B</td><td class="pt">5</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>บันทึกผล SIT และแก้ข้อบกพร่องที่พบ</td><td class="who">ทั้งทีม</td><td class="pt">5</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>เพิ่มชุดทดสอบอัตโนมัติให้ครอบคลุมขึ้น</td><td class="who">E</td><td class="pt">3</td><td class="st"><span class="dot">To Do</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP9</span><span><strong>31</strong> point</span></div>
+    </article>
+
+    <!-- Sprint 7 -->
+    <article class="sprint">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 7</span>
+        <span class="sprint-dates">3 – 9 ก.ย. 69</span>
+        <span class="chip next">ถัดไป</span>
+        <div class="sprint-goal">ให้ผู้ใช้จริงทดลองใช้และเก็บผลตอบรับ (UAT)</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 11 · 10 ก.ย. 69 — นำเสนอครั้งที่ 7 · <span class="deliver">ส่งผล User Acceptance Test</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>เตรียมชุดสถานการณ์ทดสอบสำหรับผู้ใช้จริง</td><td class="who">E</td><td class="pt">3</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>หาผู้ทดสอบ: ลูกค้า 5 คน ร้านค้า 2 ร้าน</td><td class="who">A</td><td class="pt">3</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>จัดรอบ UAT และเก็บแบบประเมินความพึงพอใจ</td><td class="who">ทั้งทีม</td><td class="pt">5</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>สรุปผล UAT และจัดลำดับความสำคัญของข้อบกพร่อง</td><td class="who">A · E</td><td class="pt">5</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>แก้ข้อบกพร่องระดับสูงที่พบจาก UAT</td><td class="who">B · C · D</td><td class="pt">8</td><td class="st"><span class="dot">To Do</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP9</span><span><strong>24</strong> point</span></div>
+    </article>
+
+    <!-- Sprint 8 -->
+    <article class="sprint">
+      <div class="sprint-head">
+        <span class="sprint-no">SPRINT 8</span>
+        <span class="sprint-dates">10 – 16 ก.ย. 69</span>
+        <span class="chip next">ถัดไป</span>
+        <div class="sprint-goal">ปิดงานและส่งมอบโครงงานฉบับสมบูรณ์</div>
+      </div>
+      <div class="review"><b>Sprint Review</b> คาบ 12 · 17 ก.ย. 69 — นำเสนอครั้งที่ 8 · <span class="deliver">ส่งโครงงานฉบับสมบูรณ์</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>งาน</th><th class="who">ผู้รับผิดชอบ</th><th class="pt">Point</th><th class="st">สถานะ</th></tr></thead>
+        <tbody>
+          <tr><td>สรุปผลการปรับปรุงประสิทธิภาพโครงงาน</td><td class="who">A</td><td class="pt">5</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>เขียนรายงานโครงงานฉบับสมบูรณ์</td><td class="who">ทั้งทีม</td><td class="pt">8</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>จัดทำคู่มือผู้ใช้งานทั้ง 3 บทบาท</td><td class="who">D</td><td class="pt">3</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>burn-up / burn-down chart ฉบับสุดท้าย</td><td class="who">A</td><td class="pt">2</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>ตรวจความครบถ้วนของเอกสารทั้งหมด</td><td class="who">E</td><td class="pt">3</td><td class="st"><span class="dot">To Do</span></td></tr>
+          <tr><td>ซ้อมนำเสนอครั้งสุดท้าย</td><td class="who">ทั้งทีม</td><td class="pt">3</td><td class="st"><span class="dot">To Do</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="sprint-foot"><span>EP1</span><span><strong>24</strong> point</span></div>
+    </article>
+  </section>
+
+  <section>
+    <h2>Planning Revision — สิ่งที่ปรับจากแผนเดิม</h2>
+    <div class="note">
+      <h3>Sprint 3 และ 4 ขยายเป็น 2 สัปดาห์</h3>
+      <p>ตารางเรียนมีสัปดาห์สอบกลางภาคคั่นระหว่างคาบ 6 กับคาบ 8 จึงยุบให้ Sprint ครอบคลุมช่วงที่ไม่มีคาบเรียน แทนที่จะปล่อยให้มี Sprint ว่างที่ไม่มี Review</p>
+    </div>
+    <div class="note">
+      <h3>Sprint 5 รับงานเกินแผน 12 point</h3>
+      <p>เดิมวางไว้ 30 point แต่เจอบั๊กของไม่คืนสต็อกระหว่างทดสอบ ซึ่งต้องแก้ก่อนสาธิต จึงแทรกเข้ามา 5 point และงานปรับหน้าแผนที่อีก 5 point เป็นผลให้ตัดงาน Google Maps API Key ออกไป Sprint 6</p>
+    </div>
+    <div class="note">
+      <h3>งานส่วนใหญ่ปิดท้าย Sprint</h3>
+      <p>เส้นจริงใน burn-down ลงช้ากว่าเส้นแนวทาง เพราะทีมรวมงานไปปิดช่วงท้าย Sprint แทนที่จะทยอยปิด แผนแก้ใน Sprint 6 คือกำหนดให้ปิดงานอย่างน้อย 1 ใบทุก 2 วัน และตรวจสอบร่วมกันกลาง Sprint</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>นำแผนนี้ลง Jira</h2>
+    <ol class="steps">
+      <li>สร้าง Site ชื่อ <code>gNNSe692.atlassian.net</code> แล้วสร้างโปรเจคด้วยเทมเพลต <strong>Scrum</strong> (ต้องมีเมนู Backlog · Board · Timeline ครบ)</li>
+      <li>เชิญสมาชิกทั้ง 5 คนเข้า Site ด้วยอีเมลที่ใช้สมัคร Atlassian</li>
+      <li>สร้าง Epic ทั้ง 9 ก้อนก่อน แล้วค่อยสร้างงานย่อยใต้แต่ละ Epic</li>
+      <li>ใส่ค่า <strong>Story point estimate</strong> ให้ทุกใบตามตารางข้างบน</li>
+      <li>สร้าง Sprint 1–8 แล้วลากงานเข้าตามช่วงวันที่ พร้อมตั้งวันเริ่ม–วันจบให้ตรงกับตาราง</li>
+      <li>ที่หน้า <strong>Board</strong> ลากงานที่เสร็จแล้วไปช่อง Done — burn-down จะวาดให้เองที่เมนู <strong>Reports</strong></li>
+      <li>ที่หน้า <strong>Timeline</strong> กด Export Spreadsheet แล้วตั้งชื่อไฟล์ <code>GNN_SaveEats_2026-08-27.csv</code></li>
+    </ol>
+  </section>
+
+  <footer>
+    วันที่จัดทำ 27 สิงหาคม 2569 · อ้างอิงกำหนดการจาก มคอ.3 รายวิชา DGT01 1130 · แทน A–E ด้วยชื่อจริงของสมาชิกก่อนส่ง
+  </footer>
+
+</div>

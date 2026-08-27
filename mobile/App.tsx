@@ -4,7 +4,7 @@
  * ลำดับการทำงาน
  *   1. โหลดฟอนต์ Prompt จากแพ็กเกจ (ถ้าโหลดไม่ได้ จะใช้ฟอนต์ระบบแทน)
  *   2. ครอบด้วย SafeAreaProvider (กันรอยบากบนหน้าจอ)
- *   3. ครอบด้วย AuthProvider (เก็บสถานะการ Login)
+ *   3. ครอบด้วย AuthProvider (เก็บสถานะการ Login) และ BadgeProvider (ตัวเลขจุดแดง)
  *   4. เรียก RootNavigator ให้ตัดสินใจว่าจะแสดงหน้าไหน
  */
 import { View, StyleSheet } from 'react-native';
@@ -20,6 +20,7 @@ import {
 
 import { AuthProvider } from './src/context/AuthContext';
 import { FilterProvider } from './src/context/FilterContext';
+import { BadgeProvider } from './src/context/BadgeContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import LoadingView from './src/components/LoadingView';
 import { theme } from './src/core/theme/theme';
@@ -72,10 +73,12 @@ export default function App(): JSX.Element {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <AuthProvider>
-        <FilterProvider>
-          <StatusBar style="dark" backgroundColor={theme.colors.background} />
-          <RootNavigator />
-        </FilterProvider>
+        <BadgeProvider>
+          <FilterProvider>
+            <StatusBar style="dark" backgroundColor={theme.colors.background} />
+            <RootNavigator />
+          </FilterProvider>
+        </BadgeProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
