@@ -19,9 +19,23 @@ interface ConfirmDialogProps {
   requireReason?: boolean;
   reasonLabel?: string;
   reasonPlaceholder?: string;
+  /**
+   * เปิดช่องกรอกที่สอง (ไม่บังคับกรอก)
+   *
+   * *** มีไว้ทำอะไร ***
+   * บางงานต้องแยก "บันทึกภายในของผู้ดูแล" ออกจาก "ข้อความที่ส่งถึงผู้ใช้"
+   * ถ้าใช้ช่องเดียวแล้วเอาไปแสดงให้ผู้ใช้อ่าน โน้ตภายในจะรั่วออกไปด้วย
+   */
+  showExtra?: boolean;
+  extraLabel?: string;
+  extraPlaceholder?: string;
+  extraHint?: string;
   loading?: boolean;
-  /** reason จะเป็นข้อความว่างถ้าไม่ได้เปิด requireReason */
-  onConfirm: (reason: string) => void;
+  /**
+   * reason จะเป็นข้อความว่างถ้าไม่ได้เปิด requireReason
+   * extra จะเป็นข้อความว่างถ้าไม่ได้เปิด showExtra
+   */
+  onConfirm: (reason: string, extra: string) => void;
   onCancel: () => void;
 }
 
@@ -35,16 +49,22 @@ export default function ConfirmDialog({
   requireReason = false,
   reasonLabel = 'เหตุผล',
   reasonPlaceholder = '',
+  showExtra = false,
+  extraLabel = '',
+  extraPlaceholder = '',
+  extraHint = '',
   loading = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): JSX.Element | null {
   const [reason, setReason] = useState('');
+  const [extra, setExtra] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
       setReason('');
+      setExtra('');
       setError('');
     }
   }, [open]);
@@ -56,7 +76,7 @@ export default function ConfirmDialog({
       setError('กรุณากรอกเหตุผล');
       return;
     }
-    onConfirm(reason.trim());
+    onConfirm(reason.trim(), extra.trim());
   }
 
   return (
@@ -76,6 +96,20 @@ export default function ConfirmDialog({
               placeholder={reasonPlaceholder}
             />
             {error ? <div className="field-error">{error}</div> : null}
+          </div>
+        ) : null}
+
+        {showExtra ? (
+          <div className="field mt-md">
+            <label className="field-label">{extraLabel}</label>
+            <textarea
+              className="input"
+              style={{ height: 88, padding: 12, resize: 'vertical' }}
+              value={extra}
+              onChange={(e) => setExtra(e.target.value)}
+              placeholder={extraPlaceholder}
+            />
+            {extraHint ? <div className="text-small text-muted mt-xs">{extraHint}</div> : null}
           </div>
         ) : null}
 

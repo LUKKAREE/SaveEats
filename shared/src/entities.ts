@@ -245,7 +245,15 @@ export interface Report {
   target_id: number;
   reason: string;
   status: ReportStatus;
+  /**
+   * บันทึกภายในของผู้ดูแล
+   *
+   * *** ห้ามส่งค่านี้ให้ผู้ใช้ทั่วไปเห็นเด็ดขาด ***
+   * ผู้ดูแลใช้จดอะไรก็ได้ รวมถึงชื่อคนแจ้ง ถ้าหลุดไปถึงร้าน = เปิดเผยตัวคนแจ้ง
+   */
   admin_note: string | null;
+  /** ข้อความที่ผู้ดูแลตั้งใจส่งถึงเจ้าของสิ่งที่ถูกแจ้ง (ปลอดภัยที่จะแสดง) */
+  resolution_message: string | null;
   created_at: string;
   updated_at: string;
   /** มาจากการ JOIN ตาราง users */

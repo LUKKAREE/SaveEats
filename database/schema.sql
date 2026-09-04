@@ -279,7 +279,7 @@ CREATE TABLE notifications (
   user_id         INT UNSIGNED NOT NULL,
   title           VARCHAR(150) NOT NULL,
   message         VARCHAR(500) NOT NULL,
-  type            ENUM('reservation','store','review','system') NOT NULL DEFAULT 'system',
+  type            ENUM('reservation','store','review','report','system') NOT NULL DEFAULT 'system',
   ref_id          INT UNSIGNED DEFAULT NULL,          -- id ของสิ่งที่อ้างถึง เช่น reservation_id
   is_read         TINYINT(1)   NOT NULL DEFAULT 0,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -338,7 +338,10 @@ CREATE TABLE reports (
   target_id     INT UNSIGNED NOT NULL,
   reason        VARCHAR(500) NOT NULL,
   status        ENUM('open','reviewing','resolved','rejected') NOT NULL DEFAULT 'open',
+  -- บันทึกภายในของผู้ดูแล ห้ามแสดงให้ผู้ใช้ทั่วไปเห็น (อาจมีชื่อคนแจ้งอยู่)
   admin_note    VARCHAR(500) DEFAULT NULL,
+  -- ข้อความที่ผู้ดูแลตั้งใจส่งถึงเจ้าของสิ่งที่ถูกแจ้ง ปลอดภัยที่จะแสดง
+  resolution_message VARCHAR(500) DEFAULT NULL,
   created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (report_id),

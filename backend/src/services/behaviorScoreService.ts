@@ -78,39 +78,65 @@ export const behaviorScoreService = {
     const nextStatus = statusFromScore(nextScore);
 
     const updated = await behaviorScoreModel.applyChange(storeId, change, reason, nextStatus);
-
-    // ตกต่ำกว่าเกณฑ์ -> ระงับร้านอัตโนมัติ
-    if (nextStatus === 'suspended') {
-      const store = await storeModel.findById(storeId);
-      if (store && store.status === 'approved') {
-        await storeModel.setStatus(storeId, 'suspended', 'คะแนนความประพฤติต่ำกว่าเกณฑ์');
-        await notificationService.notify({
-          userId: store.user_id,
-          title: 'ร้านของคุณถูกระงับชั่วคราว',
-          message: 'คะแนนความประพฤติต่ำกว่าเกณฑ์ กรุณาติดต่อผู้ดูแลระบบ',
-          type: 'store',
-          refId: storeId,
-        });
-      }
-    }
+    await suspendIfBelowThreshold(storeId, nextStatus);
     return updated;
   },
 
-  /** Admin ปรับคะแนนเอง */
+  /**
+   * Admin ปรับคะแนนเอง
+   *
+   * *** ต้องเรียก suspendIfBelowThreshold เหมือน applyRule ***
+   * เดิมเมธอดนี้อัปเดตแค่ตัวเลขกับป้ายสถานะในตารางคะแนน แต่ไม่ได้แตะสถานะร้านจริง
+   * ผลคือผู้ดูแลหักคะแนนจนต่ำกว่าเกณฑ์ หน้าเว็บขึ้นว่าร้านถูกระงับ
+   * แต่ร้านยังขายได้ปกติ ลูกค้ายังจองได้ และเจ้าของร้านไม่รู้ตัวเลย
+   * ระบบจึงอยู่ในสภาพขัดแย้งกันเอง ป้ายบอกอย่าง ของจริงเป็นอีกอย่าง
+   */
   async adminAdjust(storeId: number, change: number, reason?: string): Promise<BehaviorScore> {
     const current = await behaviorScoreModel.findByStore(storeId);
     const nextScore = Math.max(0, Math.min(100, (current?.score ?? RULES.START_SCORE) + change));
-    return behaviorScoreModel.applyChange(
+    const nextStatus = statusFromScore(nextScore);
+
+    const updated = await behaviorScoreModel.applyChange(
       storeId,
       change,
       reason && reason.trim() !== '' ? reason : 'ผู้ดูแลระบบปรับคะแนน',
-      statusFromScore(nextScore)
+      nextStatus
     );
+    await suspendIfBelowThreshold(storeId, nextStatus);
+    return updated;
   },
 
   async listAll(): Promise<BehaviorScoreForAdmin[]> {
     return behaviorScoreModel.listAllForAdmin();
   },
 };
+
+/**
+ * คะแนนตกต่ำกว่าเกณฑ์ -> ระงับร้านอัตโนมัติ พร้อมแจ้งเจ้าของร้าน
+ *
+ * *** ทำไมต้องแยกเป็นฟังก์ชันกลาง ***
+ * คะแนนเปลี่ยนได้ 2 ทาง คือระบบหักเองตามกติกา กับผู้ดูแลกดปรับในเว็บ
+ * ถ้าเขียนตรรกะระงับร้านไว้แค่ทางเดียว อีกทางจะทำงานไม่เหมือนกันโดยไม่มีใครรู้
+ * รวมไว้ที่เดียวแบบนี้ ต่อให้วันหน้ามีทางที่สามเพิ่มมา ก็แค่เรียกฟังก์ชันนี้
+ *
+ * *** ทำไมเช็ค status === 'approved' ก่อน ***
+ * ร้านที่ถูกระงับอยู่แล้ว หรือยังไม่อนุมัติ ไม่ต้องระงับซ้ำ
+ * ไม่งั้นเจ้าของร้านจะได้แจ้งเตือนซ้ำ ๆ ทุกครั้งที่คะแนนขยับ
+ */
+async function suspendIfBelowThreshold(storeId: number, nextStatus: BehaviorStatus): Promise<void> {
+  if (nextStatus !== 'suspended') return;
+
+  const store = await storeModel.findById(storeId);
+  if (!store || store.status !== 'approved') return;
+
+  await storeModel.setStatus(storeId, 'suspended', 'คะแนนความประพฤติต่ำกว่าเกณฑ์');
+  await notificationService.notify({
+    userId: store.user_id,
+    title: 'ร้านของคุณถูกระงับชั่วคราว',
+    message: 'คะแนนความประพฤติต่ำกว่าเกณฑ์ กรุณาติดต่อผู้ดูแลระบบ',
+    type: 'store',
+    refId: storeId,
+  });
+}
 
 export default behaviorScoreService;

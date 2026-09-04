@@ -59,6 +59,8 @@ export const NotificationType = {
   RESERVATION: 'reservation',
   STORE: 'store',
   REVIEW: 'review',
+  /** ความคืบหน้าของเรื่องที่แจ้งปัญหา (เพิ่มพร้อม migration_03) */
+  REPORT: 'report',
   SYSTEM: 'system',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];

@@ -48,14 +48,29 @@ export const reportModel = {
     return rows[0] ?? null;
   },
 
+  /**
+   * เปลี่ยนสถานะ พร้อมบันทึกข้อความ 2 ชุดที่แยกกันคนละหน้าที่
+   *
+   *   adminNote          บันทึกภายใน   เห็นเฉพาะผู้ดูแล
+   *   resolutionMessage  ข้อความถึงร้าน ส่งออกไปเป็นการแจ้งเตือน
+   *
+   * *** ใช้ COALESCE เพื่อไม่ให้ค่าเดิมหาย ***
+   * ส่ง null มา = ไม่ได้ตั้งใจแก้ช่องนั้น ให้เก็บของเดิมไว้
+   * ไม่ใช่การสั่งล้างค่าทิ้ง
+   */
   async updateStatus(
     reportId: number,
     status: ReportStatus,
-    adminNote: string | null = null
+    adminNote: string | null = null,
+    resolutionMessage: string | null = null
   ): Promise<Report | null> {
     await execute(
-      'UPDATE reports SET status = ?, admin_note = COALESCE(?, admin_note) WHERE report_id = ?',
-      [status, adminNote, reportId]
+      `UPDATE reports
+          SET status = ?,
+              admin_note = COALESCE(?, admin_note),
+              resolution_message = COALESCE(?, resolution_message)
+        WHERE report_id = ?`,
+      [status, adminNote, resolutionMessage, reportId]
     );
     return reportModel.findById(reportId);
   },

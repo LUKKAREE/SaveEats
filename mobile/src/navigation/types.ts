@@ -102,6 +102,8 @@ export type CustomerStackParamList = {
   WriteReview: { reservationId: number; storeName: string };
   /** รีวิวทั้งหมดที่ลูกค้าคนนี้เคยเขียน (เข้าจากแท็บ "ฉัน") */
   MyReviews: undefined;
+  /** เรื่องที่เคยแจ้งปัญหาไว้ พร้อมสถานะล่าสุด (เข้าจากแท็บ "ฉัน") */
+  MyReports: undefined;
   Notifications: undefined;
   EditProfile: undefined;
   Report: ReportParams;
@@ -151,6 +153,8 @@ export type SellerStackParamList = {
   SellerEnterCode: undefined;
   SellerReviews: undefined;
   ReservationDetail: { reservationId: number };
+  /** ร้านก็แจ้งปัญหาได้ จึงต้องดูประวัติของตัวเองได้เหมือนกัน */
+  MyReports: undefined;
   Notifications: undefined;
   /** ร้านก็แก้ชื่อ/เบอร์/รูปโปรไฟล์ของตัวเองได้ ใช้หน้าจอเดียวกับฝั่งลูกค้า */
   EditProfile: undefined;

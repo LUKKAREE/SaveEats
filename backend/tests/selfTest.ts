@@ -13,7 +13,13 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import type { PoolConnection } from 'mysql2/promise';
-import type { Store, ReservationStatus } from '@shared/index';
+import type { Store, ReservationStatus, ReportStatus, ReportTargetType } from '@shared/index';
+
+/** รูปร่างของแจ้งเตือนที่ notificationModel.create รับเข้ามา */
+interface FakeNotification {
+  userId: number; title: string; message: string;
+  type: string; refId: number | null;
+}
 
 // ------------------------------------------------------------------
 //  ฐานข้อมูลจำลองในหน่วยความจำ
@@ -36,15 +42,32 @@ interface FakeReservation {
   food_name: string; store_name: string;
 }
 
+interface FakeReview {
+  review_id: number; customer_id: number; store_id: number;
+  reservation_id: number; rating: number; comment: string | null;
+  created_at: string;
+}
+
+interface FakeReport {
+  report_id: number; reporter_id: number;
+  target_type: ReportTargetType; target_id: number;
+  reason: string; status: ReportStatus;
+  admin_note: string | null; resolution_message: string | null;
+  created_at: string; updated_at: string;
+}
+
 const db = {
   users: [] as FakeUser[],
   stores: [] as Store[],
   posts: [] as FakePost[],
   reservations: [] as FakeReservation[],
-  notifications: [] as unknown[],
+  reports: [] as FakeReport[],
+  reviews: [] as FakeReview[],
+  favorites: [] as Array<{ user_id: number; store_id: number }>,
+  notifications: [] as FakeNotification[],
   behavior: {} as Record<number, { store_id: number; score: number; status: string }>,
 };
-const seq = { user: 1, store: 1, res: 1 };
+const seq = { user: 1, store: 1, res: 1, report: 1, review: 1 };
 
 /*
  * ชื่อ property ที่ต้องปล่อยผ่าน ห้ามดักจับ
@@ -132,11 +155,79 @@ mock('../src/models/storeModel', {
     if (s) s.status = status;
     return s ?? null;
   },
-  refreshRating: async () => undefined,
+  /*
+   * ของจริงสั่งฐานข้อมูลคำนวณค่าเฉลี่ยใหม่จากตาราง reviews
+   * ตัวจำลองคำนวณเองแบบเดียวกัน จะได้ทดสอบได้ว่าเรียกแล้วคะแนนเปลี่ยนจริง
+   */
+  refreshRating: async (storeId: number) => {
+    const s2 = db.stores.find((x) => x.store_id === Number(storeId));
+    if (!s2) return;
+    const rv = db.reviews.filter((x) => x.store_id === Number(storeId));
+    const avg = rv.length === 0 ? 0 : rv.reduce((a, b) => a + b.rating, 0) / rv.length;
+    s2.rating = Math.round(avg * 100) / 100;
+    s2.review_count = rv.length;
+  },
 });
 
 mock('../src/models/notificationModel', {
-  create: async (n: unknown) => { db.notifications.push(n); return db.notifications.length; },
+  create: async (n: FakeNotification) => { db.notifications.push(n); return db.notifications.length; },
+});
+
+mock('../src/models/reportModel', {
+  findById: async (id: number) => db.reports.find((r) => r.report_id === Number(id)) ?? null,
+  updateStatus: async (
+    id: number,
+    status: ReportStatus,
+    adminNote: string | null = null,
+    resolutionMessage: string | null = null
+  ) => {
+    const r = db.reports.find((x) => x.report_id === Number(id));
+    if (!r) return null;
+    r.status = status;
+    // COALESCE ของจริง : ส่ง null มา = ไม่ได้ตั้งใจแก้ช่องนั้น ต้องเก็บค่าเดิมไว้
+    if (adminNote !== null) r.admin_note = adminNote;
+    if (resolutionMessage !== null) r.resolution_message = resolutionMessage;
+    return r;
+  },
+});
+
+mock('../src/models/reviewModel', {
+  create: async (i: { customerId: number; storeId: number; reservationId: number; rating: number; comment?: string | null }) => {
+    const rv: FakeReview = {
+      review_id: seq.review++, customer_id: i.customerId, store_id: i.storeId,
+      reservation_id: i.reservationId, rating: i.rating, comment: i.comment ?? null,
+      created_at: '2026-09-03 12:00:00',
+    };
+    db.reviews.push(rv);
+    return rv.review_id;
+  },
+  findById: async (id: number) => db.reviews.find((x) => x.review_id === Number(id)) ?? null,
+  findByReservation: async (rid: number) =>
+    db.reviews.find((x) => x.reservation_id === Number(rid)) ?? null,
+  remove: async (id: number) => {
+    const i = db.reviews.findIndex((x) => x.review_id === Number(id));
+    if (i >= 0) db.reviews.splice(i, 1);
+  },
+});
+
+/*
+ * ร้านโปรด
+ * ของจริงกันข้อมูลซ้ำด้วย UNIQUE KEY (user_id, store_id) ที่ฐานข้อมูล
+ * ตัวจำลองจึงต้องกันซ้ำแบบเดียวกัน ไม่งั้นเทสต์จะผ่านทั้งที่ของจริงอาจพัง
+ */
+mock('../src/models/favoriteModel', {
+  add: async (uid: number, sid: number) => {
+    const dup = db.favorites.some((f) => f.user_id === uid && f.store_id === sid);
+    if (!dup) db.favorites.push({ user_id: uid, store_id: sid });
+  },
+  remove: async (uid: number, sid: number) => {
+    const i = db.favorites.findIndex((f) => f.user_id === uid && f.store_id === sid);
+    if (i >= 0) db.favorites.splice(i, 1);
+  },
+  exists: async (uid: number, sid: number) =>
+    db.favorites.some((f) => f.user_id === uid && f.store_id === sid),
+  listStoreIds: async (uid: number) =>
+    db.favorites.filter((f) => f.user_id === uid).map((f) => f.store_id),
 });
 
 mock('../src/models/postModel', {
@@ -229,6 +320,10 @@ process.env['JWT_SECRET'] = 'test_secret';
 /* eslint-disable @typescript-eslint/no-var-requires */
 const authService = require('../src/services/authService').default;
 const reservationService = require('../src/services/reservationService').default;
+const reportService = require('../src/services/reportService').default;
+const reviewService = require('../src/services/reviewService').default;
+const behaviorScoreService = require('../src/services/behaviorScoreService').default;
+const favoriteModel = require('../src/models/favoriteModel').default;
 const qrService = require('../src/services/qrService').default;
 const { distanceKm } = require('../src/utils/geo');
 
@@ -421,6 +516,211 @@ async function main(): Promise<void> {
       await reservationService.cancel(r4.reservation_id, { userId: 99, role: 'customer', email: '' });
       throw new Error('ไม่ควรสำเร็จ');
     } catch (e) { assert.strictEqual(statusCodeOf(e), 403); }
+  });
+
+  console.log('\n=== ทดสอบการแจ้งเตือนเรื่องร้องเรียน ===');
+
+  /*
+   * ปูข้อมูล : ลูกค้า (customer) แจ้งปัญหาร้านของ seller
+   * ทั้งสองคนถูกสร้างไว้แล้วตอนทดสอบ Auth ด้านบน จึงหยิบมาใช้ต่อได้เลย
+   */
+  const reportedStore = db.stores[0];
+  /*
+   * ใช้ if แล้ว throw ไม่ใช้ assert.ok
+   * เพราะ TypeScript จะยอมแคบชนิดให้เฉพาะรูปแบบนี้
+   * ถ้าใช้ assert.ok มันยังมองว่า reportedStore อาจเป็น undefined อยู่ แล้ว typecheck จะไม่ผ่าน
+   */
+  if (reportedStore === undefined) throw new Error('ต้องมีร้านจากเทสต์ก่อนหน้า');
+  const storeOwnerId = reportedStore.user_id;
+  /*
+   * ดึง store_id ออกมาเก็บเป็นตัวแปรก่อน
+   * เพราะ function declaration ถูกยกขึ้นไปบนสุด TypeScript จึงไม่การันตีว่า
+   * ตอนฟังก์ชันทำงานจริง reportedStore ผ่าน if ข้างบนมาแล้วหรือยัง
+   */
+  const reportedStoreId = reportedStore.store_id;
+  const reporterId = db.users.find((u) => u.role === 'customer')?.user_id ?? 1;
+
+  function newReport(): FakeReport {
+    const r: FakeReport = {
+      report_id: seq.report++, reporter_id: reporterId,
+      target_type: 'store', target_id: reportedStoreId,
+      reason: 'อาหารมีสภาพไม่เหมาะแก่การรับประทาน',
+      status: 'open', admin_note: null, resolution_message: null,
+      created_at: '2026-08-27 15:05:00', updated_at: '2026-08-27 15:05:00',
+    };
+    db.reports.push(r);
+    db.notifications.length = 0;   // เริ่มนับแจ้งเตือนใหม่ทุกเทสต์
+    return r;
+  }
+
+  await t('เปลี่ยนสถานะแล้วคนแจ้งได้รับแจ้งเตือน', async () => {
+    const r = newReport();
+    await reportService.updateByAdmin(r.report_id, 'reviewing', null, null);
+
+    const toReporter = db.notifications.filter((n) => n.userId === reporterId);
+    assert.strictEqual(toReporter.length, 1, 'คนแจ้งต้องได้แจ้งเตือน 1 ใบ');
+    assert.strictEqual(toReporter[0]?.type, 'report');
+    assert.strictEqual(toReporter[0]?.refId, r.report_id);
+  });
+
+  await t('ปิดเรื่องพร้อมข้อความ แล้วเจ้าของร้านได้รับข้อความนั้น', async () => {
+    const r = newReport();
+    await reportService.updateByAdmin(
+      r.report_id, 'resolved', 'ภายใน: คนแจ้งชื่อ Ham โทรหาร้านแล้ว', 'กรุณาตรวจสอบคุณภาพอาหารก่อนลงขาย'
+    );
+
+    const toOwner = db.notifications.filter((n) => n.userId === storeOwnerId);
+    assert.strictEqual(toOwner.length, 1, 'เจ้าของร้านต้องได้แจ้งเตือน 1 ใบ');
+    assert.strictEqual(toOwner[0]?.message, 'กรุณาตรวจสอบคุณภาพอาหารก่อนลงขาย');
+  });
+
+  /*
+   * *** เทสต์ที่สำคัญที่สุดในไฟล์นี้ ***
+   * admin_note คือบันทึกภายใน อาจมีชื่อคนแจ้งอยู่
+   * ถ้าวันหนึ่งมีคนแก้โค้ดแล้วเผลอเอา admin_note ไปต่อท้ายข้อความถึงร้าน
+   * เท่ากับเปิดเผยตัวคนแจ้ง ซึ่งกู้คืนไม่ได้ เทสต์ข้อนี้จะดักไว้ตั้งแต่ก่อน push
+   */
+  await t('ข้อความถึงร้านต้องไม่มีบันทึกภายในปนไปด้วย', async () => {
+    const r = newReport();
+    const secret = 'ภายใน: คนแจ้งชื่อ Ham';
+    await reportService.updateByAdmin(r.report_id, 'resolved', secret, 'กรุณาตรวจสอบคุณภาพอาหาร');
+
+    const toOwner = db.notifications.filter((n) => n.userId === storeOwnerId);
+    for (const n of toOwner) {
+      assert.ok(!n.message.includes('Ham'), 'ข้อความถึงร้านมีชื่อคนแจ้งปนอยู่');
+      assert.ok(!n.message.includes(secret), 'ข้อความถึงร้านมีบันทึกภายในปนอยู่');
+    }
+  });
+
+  await t('ปฏิเสธเรื่อง ไม่ต้องรบกวนร้าน', async () => {
+    const r = newReport();
+    await reportService.updateByAdmin(r.report_id, 'rejected', 'ตรวจแล้วไม่พบความผิดปกติ', null);
+
+    assert.strictEqual(
+      db.notifications.filter((n) => n.userId === storeOwnerId).length, 0,
+      'ตรวจแล้วร้านไม่ผิด จึงไม่ควรมีแจ้งเตือนไปหาร้าน'
+    );
+  });
+
+  await t('ปิดเรื่องแต่ไม่เขียนข้อความ ร้านไม่ได้รับอะไร', async () => {
+    const r = newReport();
+    await reportService.updateByAdmin(r.report_id, 'resolved', 'จัดการภายในแล้ว', null);
+
+    assert.strictEqual(
+      db.notifications.filter((n) => n.userId === storeOwnerId).length, 0,
+      'ไม่ได้เขียนข้อความถึงร้าน จึงไม่ควรส่งแจ้งเตือนเปล่า ๆ'
+    );
+  });
+
+  await t('แจ้งเรื่องที่ไม่มีอยู่จริง ต้องได้ 404', async () => {
+    try {
+      await reportService.updateByAdmin(9999, 'resolved', null, null);
+      throw new Error('ไม่ควรสำเร็จ');
+    } catch (e) { assert.strictEqual(statusCodeOf(e), 404); }
+  });
+
+  console.log('\n=== ทดสอบรีวิวและคะแนนร้าน ===');
+
+  /*
+   * ปูข้อมูล : สร้างการจองใหม่แล้วทำให้เป็น "รับอาหารแล้ว"
+   * เพราะกติกาคือรีวิวได้เฉพาะการจองที่รับอาหารเรียบร้อยแล้วเท่านั้น
+   */
+  post0.quantity_left = 10;
+  const rvRes = await reservationService.create(1, { postId: 1, quantity: 1 });
+  const rvRow = db.reservations.find((x) => x.reservation_id === rvRes.reservation_id);
+  if (rvRow === undefined) throw new Error('ไม่พบการจองที่เพิ่งสร้าง');
+  const rvId = rvRow.reservation_id;
+
+  await t('รีวิวการจองที่ยังไม่ได้รับอาหารไม่ได้', async () => {
+    try {
+      await reviewService.create(1, { reservationId: rvId, rating: 5, comment: 'ยังไม่ได้รับเลย' });
+      throw new Error('ไม่ควรสำเร็จ');
+    } catch (e) { assert.strictEqual(statusCodeOf(e), 400); }
+  });
+
+  await t('รีวิวการจองของคนอื่นไม่ได้', async () => {
+    rvRow.status = 'completed';
+    try {
+      await reviewService.create(99, { reservationId: rvId, rating: 5, comment: 'ไม่ใช่ของฉัน' });
+      throw new Error('ไม่ควรสำเร็จ');
+    } catch (e) { assert.strictEqual(statusCodeOf(e), 403); }
+  });
+
+  await t('รีวิวสำเร็จ แล้วคะแนนเฉลี่ยกับจำนวนรีวิวของร้านอัปเดต', async () => {
+    const before = db.reviews.length;
+    await reviewService.create(1, { reservationId: rvId, rating: 4, comment: 'อร่อยดี' });
+    assert.strictEqual(db.reviews.length, before + 1, 'ต้องมีรีวิวเพิ่ม 1 รายการ');
+    assert.strictEqual(store0.review_count, 1, 'จำนวนรีวิวของร้านต้องเป็น 1');
+    assert.strictEqual(Number(store0.rating), 4, 'คะแนนเฉลี่ยต้องเป็น 4');
+  });
+
+  await t('รีวิวการจองเดิมซ้ำไม่ได้', async () => {
+    try {
+      await reviewService.create(1, { reservationId: rvId, rating: 1, comment: 'รีวิวซ้ำ' });
+      throw new Error('ไม่ควรสำเร็จ');
+    } catch (e) { assert.strictEqual(statusCodeOf(e), 409); }
+    assert.strictEqual(db.reviews.filter((x) => x.reservation_id === rvId).length, 1);
+  });
+
+  await t('ได้รีวิวดาวน้อย แล้วคะแนนความประพฤติของร้านลดลง', async () => {
+    // สร้างการจองอีกใบแล้วปิดให้เรียบร้อย เพื่อรีวิวได้อีกครั้ง
+    const r = await reservationService.create(2, { postId: 1, quantity: 1 });
+    const row = db.reservations.find((x) => x.reservation_id === r.reservation_id);
+    if (row === undefined) throw new Error('ไม่พบการจอง');
+    row.status = 'completed';
+
+    const before = db.behavior[1]?.score ?? 100;
+    await reviewService.create(2, { reservationId: row.reservation_id, rating: 1, comment: 'ไม่โอเค' });
+    const after = db.behavior[1]?.score ?? 100;
+    assert.ok(after < before, `คะแนนต้องลดลง แต่ได้ ${before} -> ${after}`);
+  });
+
+  await t('คะแนนเฉลี่ยคำนวณจากรีวิวทั้งหมดถูกต้อง', () => {
+    const rv = db.reviews.filter((x) => x.store_id === 1);
+    const avg = rv.reduce((a, b) => a + b.rating, 0) / rv.length;
+    assert.strictEqual(Number(store0.rating), Math.round(avg * 100) / 100);
+    assert.strictEqual(store0.review_count, rv.length);
+  });
+
+  console.log('\n=== ทดสอบคะแนนความประพฤติ ===');
+
+  await t('คะแนนตกต่ำกว่าเกณฑ์ แล้วร้านถูกระงับเองพร้อมแจ้งเตือนเจ้าของ', async () => {
+    store0.status = 'approved';
+    db.notifications.length = 0;
+    // หักคะแนนรวดเดียวให้ต่ำกว่าเกณฑ์ 40
+    await behaviorScoreService.adminAdjust(1, -80, 'ทดสอบหักคะแนนจนต่ำกว่าเกณฑ์');
+
+    assert.ok((db.behavior[1]?.score ?? 100) < 40, 'คะแนนต้องต่ำกว่า 40');
+    assert.strictEqual(store0.status, 'suspended', 'ร้านต้องถูกระงับอัตโนมัติ');
+    assert.ok(
+      db.notifications.some((n) => n.userId === store0.user_id),
+      'เจ้าของร้านต้องได้รับแจ้งเตือนว่าถูกระงับ'
+    );
+  });
+
+  console.log('\n=== ทดสอบร้านโปรดและการคิดราคา ===');
+
+  await t('กดร้านโปรดซ้ำหลายรอบ ไม่เกิดข้อมูลซ้ำ', async () => {
+    await favoriteModel.add(1, 1);
+    await favoriteModel.add(1, 1);
+    await favoriteModel.add(1, 1);
+    assert.strictEqual(db.favorites.filter((f) => f.user_id === 1 && f.store_id === 1).length, 1);
+
+    await favoriteModel.remove(1, 1);
+    assert.strictEqual(await favoriteModel.exists(1, 1), false);
+  });
+
+  await t('ยอดรวมคำนวณถูกต้องเมื่อราคามีเศษสตางค์ (33.50 x 3 = 100.50)', async () => {
+    db.posts.push({
+      post_id: 2, store_id: 1, food_id: 1, status: 'active', discount_price: 33.5,
+      quantity_total: 10, quantity_left: 10, pickup_start: fmt(new Date()), pickup_end: fmt(future),
+      food_name: 'ข้าวราดแกงทดสอบ', store_name: 'ครัวคุณแม่',
+    });
+    store0.status = 'approved';   // ปลดระงับจากเทสต์ก่อนหน้า เพื่อให้จองได้
+    const r = await reservationService.create(3, { postId: 2, quantity: 3 });
+    const row = db.reservations.find((x) => x.reservation_id === r.reservation_id);
+    if (row === undefined) throw new Error('ไม่พบการจอง');
+    assert.strictEqual(row.total_price, 100.5, `ยอดรวมต้องเป็น 100.50 แต่ได้ ${row.total_price}`);
   });
 
   console.log('\n=== ทดสอบตัวช่วย ===');

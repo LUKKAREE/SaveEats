@@ -51,6 +51,7 @@ const TYPE_STYLE: Record<
   reservation: { icon: 'receipt-outline', bg: theme.colors.primaryLight, color: theme.colors.primaryDark },
   store: { icon: 'storefront-outline', bg: theme.colors.infoBg, color: theme.colors.info },
   review: { icon: 'star-outline', bg: theme.colors.warningBg, color: theme.colors.warningText },
+  report: { icon: 'flag-outline', bg: theme.colors.errorBg, color: theme.colors.error },
   system: { icon: 'information-circle-outline', bg: theme.colors.surfaceAlt, color: theme.colors.textSecondary },
 };
 
@@ -165,6 +166,16 @@ export default function NotificationScreen(): JSX.Element {
       // ลดจุดแดงลงทีละ 1 ทันที (กันติดลบด้วย Math.max เผื่อกดรัว ๆ)
       setUnreadNotifications(Math.max(0, unreadCountRef.current - 1));
       void notificationService.markRead(item.notification_id).catch(() => undefined);
+    }
+
+    /*
+     * เรื่องร้องเรียนพาไปหน้า "เรื่องที่ฉันแจ้ง" ได้ทั้งสองฝั่ง
+     * เพราะเป็นหน้าเดียวที่มีชื่อเหมือนกันและไม่ต้องส่ง parameter
+     * จึงเช็คก่อน isSeller ต่างจากประเภทอื่นที่มีเฉพาะ stack ของลูกค้า
+     */
+    if (item.type === 'report') {
+      navigation.navigate('MyReports');
+      return;
     }
 
     // พาไปหน้าที่เกี่ยวข้อง (เฉพาะฝั่งลูกค้า เพราะ stack ของร้านมีหน้าไม่เหมือนกัน)

@@ -92,6 +92,11 @@ export default function ProfileScreen(): JSX.Element {
           label: 'รีวิวและคะแนน',
           onPress: () => navigation.navigate('SellerReviews'),
         },
+        {
+          icon: 'flag-outline',
+          label: 'เรื่องที่ฉันแจ้ง',
+          onPress: () => navigation.navigate('MyReports'),
+        },
       ]
     : [
         {
@@ -109,6 +114,11 @@ export default function ProfileScreen(): JSX.Element {
           icon: 'star-outline',
           label: 'รีวิวของฉัน',
           onPress: () => navigation.navigate('MyReviews'),
+        },
+        {
+          icon: 'flag-outline',
+          label: 'เรื่องที่ฉันแจ้ง',
+          onPress: () => navigation.navigate('MyReports'),
         },
       ];
 

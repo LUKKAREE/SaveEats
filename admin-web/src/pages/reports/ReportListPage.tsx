@@ -79,14 +79,20 @@ export default function ReportListPage(): JSX.Element {
     void load();
   }, [load]);
 
-  async function applyChange(note: string): Promise<void> {
+  /**
+   * @param note     บันทึกภายใน เห็นเฉพาะผู้ดูแล
+   * @param message  ข้อความถึงเจ้าของสิ่งที่ถูกแจ้ง Backend จะยิงแจ้งเตือนให้
+   *                 (ส่งไปก็ต่อเมื่อปิดเรื่องแบบ "จัดการแล้ว" เท่านั้น)
+   */
+  async function applyChange(note: string, message: string): Promise<void> {
     if (pending === null) return;
     setProcessing(true);
     try {
       await adminService.updateReport(
         pending.report.report_id,
         pending.next,
-        note.trim() === '' ? undefined : note
+        note.trim() === '' ? undefined : note,
+        message.trim() === '' ? undefined : message
       );
       setPending(null);
       await load();
@@ -127,7 +133,16 @@ export default function ReportListPage(): JSX.Element {
         <div>
           <div>{row.reason}</div>
           {row.admin_note !== null ? (
-            <div className="text-small text-muted mt-md">บันทึกผู้ดูแล : {row.admin_note}</div>
+            <div className="text-small text-muted mt-md">บันทึกภายใน : {row.admin_note}</div>
+          ) : null}
+          {/*
+            แยกสีให้เห็นชัดว่าข้อความนี้ "ส่งออกไปแล้ว" ไม่ใช่โน้ตภายใน
+            ผู้ดูแลจะได้ไม่สับสนว่าอันไหนร้านอ่านได้บ้าง
+          */}
+          {row.resolution_message !== null ? (
+            <div className="text-small mt-xs" style={{ color: 'var(--color-primary)' }}>
+              ส่งถึงผู้ถูกแจ้ง : {row.resolution_message}
+            </div>
           ) : null}
         </div>
       ),
@@ -240,11 +255,15 @@ export default function ReportListPage(): JSX.Element {
         confirmLabel="ยืนยัน"
         danger={pending?.next === 'rejected'}
         requireReason={mustWriteNote}
-        reasonLabel="บันทึกของผู้ดูแล"
+        reasonLabel="บันทึกภายใน (ผู้ถูกแจ้งไม่เห็น)"
         reasonPlaceholder="เช่น ติดต่อร้านแล้ว ร้านยืนยันว่าจะไม่เกิดขึ้นอีก"
+        showExtra={pending?.next === 'resolved'}
+        extraLabel="ข้อความถึงผู้ถูกแจ้ง (ไม่กรอกก็ได้)"
+        extraPlaceholder="เช่น ได้รับรายงานเรื่องคุณภาพอาหาร กรุณาตรวจสอบก่อนลงขายครั้งต่อไป"
+        extraHint="ข้อความนี้จะถูกส่งเป็นการแจ้งเตือนถึงเจ้าของโดยตรง ห้ามระบุชื่อผู้แจ้ง"
         loading={processing}
-        onConfirm={(note) => {
-          void applyChange(note);
+        onConfirm={(note, message) => {
+          void applyChange(note, message);
         }}
         onCancel={() => setPending(null)}
       />

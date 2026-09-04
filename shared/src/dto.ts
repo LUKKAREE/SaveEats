@@ -204,7 +204,13 @@ export interface CreateReportRequest {
 
 export interface UpdateReportRequest {
   status: ReportStatus;
+  /** บันทึกภายใน เห็นเฉพาะผู้ดูแล */
   adminNote?: string;
+  /**
+   * ข้อความถึงเจ้าของสิ่งที่ถูกแจ้ง
+   * ส่งมาเฉพาะตอนปิดเรื่องแบบ resolved เท่านั้น ถึงจะมีการแจ้งเตือนออกไป
+   */
+  resolutionMessage?: string;
 }
 
 // ---------------------------------------------------------------- Admin

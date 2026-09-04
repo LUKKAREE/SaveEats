@@ -18,6 +18,7 @@ import postModel from '../models/postModel';
 import reservationModel from '../models/reservationModel';
 import reviewModel from '../models/reviewModel';
 import reportModel from '../models/reportModel';
+import reportService from '../services/reportService';
 import behaviorScoreService from '../services/behaviorScoreService';
 import notificationService from '../services/notificationService';
 import reservationService from '../services/reservationService';
@@ -227,13 +228,24 @@ export const adminController = {
     paginated(res, items, { page, limit, total });
   },
 
-  /** PUT /api/admin/reports/:id */
+  /**
+   * PUT /api/admin/reports/:id
+   *
+   * ตัวการเปลี่ยนสถานะจริงอยู่ที่ reportService.updateByAdmin
+   * เพราะนอกจากอัปเดตแถวแล้ว ยังต้องตัดสินใจว่าจะแจ้งเตือนใครบ้าง
+   * ซึ่งเป็น Business Logic ห้ามเขียนไว้ที่ controller (กฎเหล็กข้อ 2)
+   */
   async updateReport(req: Request, res: Response): Promise<void> {
     const body = req.body as UpdateReportRequest;
     if (!VALID_REPORT_STATUS.includes(body.status)) {
       throw ApiError.badRequest('สถานะการแจ้งปัญหาไม่ถูกต้อง');
     }
-    const updated = await reportModel.updateStatus(paramId(req), body.status, body.adminNote ?? null);
+    const updated = await reportService.updateByAdmin(
+      paramId(req),
+      body.status,
+      body.adminNote ?? null,
+      body.resolutionMessage ?? null
+    );
     ok(res, updated, 'อัปเดตสถานะการแจ้งปัญหาแล้ว');
   },
 

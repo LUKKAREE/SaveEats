@@ -88,8 +88,22 @@ export const adminService = {
   async getReports(params: ListQuery & { status?: ReportStatus | '' } = {}): Promise<PaginatedResponse<Report>> {
     return apiGet<PaginatedResponse<Report>>('/admin/reports', { params });
   },
-  async updateReport(reportId: number, status: ReportStatus, adminNote?: string): Promise<ApiResponse<Report>> {
-    const body: UpdateReportRequest = adminNote === undefined ? { status } : { status, adminNote };
+  /**
+   * อัปเดตสถานะเรื่องร้องเรียน
+   *
+   * adminNote          บันทึกภายใน ผู้ใช้ทั่วไปไม่เห็น
+   * resolutionMessage  ข้อความถึงเจ้าของสิ่งที่ถูกแจ้ง Backend จะยิงแจ้งเตือนให้
+   *                    (ส่งไปก็ต่อเมื่อสถานะเป็น resolved เท่านั้น)
+   */
+  async updateReport(
+    reportId: number,
+    status: ReportStatus,
+    adminNote?: string,
+    resolutionMessage?: string
+  ): Promise<ApiResponse<Report>> {
+    const body: UpdateReportRequest = { status };
+    if (adminNote !== undefined) body.adminNote = adminNote;
+    if (resolutionMessage !== undefined) body.resolutionMessage = resolutionMessage;
     return apiPut<ApiResponse<Report>>(`/admin/reports/${reportId}`, body);
   },
 

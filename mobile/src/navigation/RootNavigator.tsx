@@ -38,6 +38,7 @@ import ReservationSuccessScreen from '../features/reservation/screens/Reservatio
 import ReservationDetailScreen from '../features/reservation/screens/ReservationDetailScreen';
 import WriteReviewScreen from '../features/review/screens/WriteReviewScreen';
 import MyReviewsScreen from '../features/review/screens/MyReviewsScreen';
+import MyReportsScreen from '../features/report/screens/MyReportsScreen';
 import NotificationScreen from '../features/notification/screens/NotificationScreen';
 import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
 import ReportScreen from '../features/report/screens/ReportScreen';
@@ -107,6 +108,7 @@ function CustomerNavigator(): JSX.Element {
       <CustomerStack.Screen name="ReservationDetail" component={ReservationDetailScreen} options={{ title: 'รายละเอียดการจอง' }} />
       <CustomerStack.Screen name="WriteReview" component={WriteReviewScreen} options={{ title: 'เขียนรีวิว' }} />
       <CustomerStack.Screen name="MyReviews" component={MyReviewsScreen} options={{ title: 'รีวิวของฉัน' }} />
+      <CustomerStack.Screen name="MyReports" component={MyReportsScreen} options={{ title: 'เรื่องที่ฉันแจ้ง' }} />
       <CustomerStack.Screen name="Notifications" component={NotificationScreen} options={{ title: 'การแจ้งเตือน' }} />
       <CustomerStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'แก้ไขข้อมูลส่วนตัว' }} />
       <CustomerStack.Screen name="Report" component={ReportScreen} options={{ title: 'แจ้งปัญหา' }} />
@@ -141,6 +143,7 @@ function SellerNavigator(): JSX.Element {
       />
       <SellerStack.Screen name="SellerEnterCode" component={EnterReservationCodeScreen} options={{ title: 'กรอกรหัส 4 หลัก' }} />
       <SellerStack.Screen name="SellerReviews" component={SellerReviewScreen} options={{ title: 'รีวิวและคะแนน' }} />
+      <SellerStack.Screen name="MyReports" component={MyReportsScreen} options={{ title: 'เรื่องที่ฉันแจ้ง' }} />
       {/*
         ร้านค้าก็ต้องแก้ชื่อ/เบอร์/รูปโปรไฟล์ของตัวเองได้เหมือนลูกค้า
         ใช้หน้าจอตัวเดียวกัน ไม่ต้องเขียนซ้ำ
