@@ -18,7 +18,7 @@ on:
   push:
     branches: [main, master]
   pull_request:
-  # เปิดให้กดสั่งรันเองจากหน้าเว็บ GitHub ได้ด้วย (ใช้ตอนสาธิตหน้าห้อง)
+  # เปิดให้กดสั่งรันเองจากหน้าเว็บ GitHub ได้ด้วย
   workflow_dispatch:
 
 jobs:
