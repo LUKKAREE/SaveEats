@@ -11,6 +11,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+/*
+ * *** ตั้งเขตเวลาให้เป็นไทยก่อนอย่างอื่นทั้งหมด ***
+ *
+ * เซิร์ฟเวอร์บนคลาวด์เกือบทุกเจ้าตั้งเวลาเป็น UTC ซึ่งช้ากว่าไทย 7 ชั่วโมง
+ * ถ้าไม่ตั้งค่านี้ ทุกอย่างที่คำนวณจากเวลาปัจจุบันจะเพี้ยนหมด เช่น
+ *   - เวลาหมดอายุของคิว (คำนวณจาก new Date())
+ *   - การเช็คว่าเลยเวลารับอาหารหรือยัง
+ *   - งานตามเวลาที่ปิดคิวหมดอายุ
+ * บนเครื่องที่ตั้งเวลาไทยอยู่แล้วจะไม่เห็นปัญหานี้เลย จึงพลาดได้ง่ายมาก
+ *
+ * ต้องตั้งก่อน import โมดูลอื่น เพราะ Node อ่านค่านี้ครั้งเดียวตอนสร้าง Date ตัวแรก
+ */
+process.env['TZ'] = process.env['TZ'] ?? 'Asia/Bangkok';
+
 /** อ่านค่าเป็นข้อความ ถ้าไม่มีให้ใช้ค่าสำรอง */
 function str(key: string, fallback: string): string {
   const value = process.env[key];
@@ -23,6 +37,13 @@ function num(key: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/** อ่านค่าเป็นจริง/เท็จ รับได้ทั้ง true / 1 / yes */
+function bool(key: string, fallback: boolean): boolean {
+  const value = process.env[key];
+  if (value === undefined || value === '') return fallback;
+  return ['true', '1', 'yes'].includes(value.toLowerCase());
+}
+
 export const env = {
   PORT: num('PORT', 3000),
   NODE_ENV: str('NODE_ENV', 'development'),
@@ -33,10 +54,44 @@ export const env = {
   /** รหัสผ่าน MySQL ของ XAMPP ปกติเป็นค่าว่าง */
   DB_PASSWORD: process.env.DB_PASSWORD ?? '',
   DB_NAME: str('DB_NAME', 'saveeats'),
+  /**
+   * ต่อฐานข้อมูลแบบเข้ารหัสหรือไม่
+   *
+   * XAMPP ในเครื่องไม่ต้องใช้ (ค่าเริ่มต้นจึงเป็น false)
+   * แต่ฐานข้อมูลบนคลาวด์ส่วนใหญ่ เช่น Aiven บังคับให้ต่อแบบเข้ารหัสเท่านั้น
+   * ตอนขึ้นคลาวด์ให้ตั้ง DB_SSL=true
+   */
+  DB_SSL: bool('DB_SSL', false),
+  /**
+   * ใบรับรองของผู้ให้บริการฐานข้อมูล (ไม่ใส่ก็ต่อได้)
+   *
+   * ใส่ได้ 2 แบบ
+   *   1. วางเนื้อใบรับรองทั้งก้อน (ขึ้นต้นด้วย -----BEGIN CERTIFICATE-----)
+   *   2. ใส่เป็นที่อยู่ไฟล์ เช่น C:\SaveEats\backend\ca.pem
+   *
+   * ถ้าเว้นว่าง ระบบยังเข้ารหัสการเชื่อมต่อให้อยู่ แต่จะไม่ตรวจว่าปลายทางเป็นตัวจริง
+   * ซึ่งพอใช้ได้สำหรับงานเรียน แต่ถ้าใส่ได้ก็ควรใส่
+   */
+  DB_SSL_CA: str('DB_SSL_CA', ''),
+  /**
+   * เขตเวลาของ "ฝั่งฐานข้อมูล" เขียนเป็นระยะห่างจาก UTC
+   *
+   * *** คนละเรื่องกับ TZ ที่ตั้งไว้ข้างบน ***
+   * TZ คุมเวลาที่ Node คำนวณเอง เช่น เวลาหมดอายุของคิว
+   * ส่วนค่านี้คุมเวลาที่ฐานข้อมูลสร้างเอง เช่น created_at และคำสั่ง NOW() ในทุก query
+   * ถ้าตั้งไม่ตรงกัน เวลาสองฝั่งจะห่างกัน 7 ชั่วโมง แล้วระบบจะรวนทั้งหมด
+   *
+   * ใช้เป็นตัวเลข +07:00 ไม่ใช่ชื่อเมือง เพราะฐานข้อมูลบางเครื่องไม่ได้ติดตั้งตารางชื่อเขตเวลาไว้
+   */
+  DB_TIMEZONE: str('DB_TIMEZONE', '+07:00'),
 
   JWT_SECRET: str('JWT_SECRET', 'saveeats_dev_secret_change_me'),
   JWT_EXPIRES_IN: str('JWT_EXPIRES_IN', '7d'),
 
+  /**
+   * ที่อยู่ของ Backend ที่คนภายนอกเรียกถึงได้ ใช้ประกอบเป็น URL ของรูปภาพ
+   * ตอนขึ้นคลาวด์ให้ใส่ที่อยู่จริง เช่น https://saveeats-api.onrender.com
+   */
   PUBLIC_BASE_URL: str('PUBLIC_BASE_URL', 'http://localhost:3000'),
 
   // ---- ส่งอีเมล (ใช้กับหน้า "ลืมรหัสผ่าน") ----
@@ -57,6 +112,14 @@ export const env = {
 
 if (env.NODE_ENV === 'production' && env.JWT_SECRET.includes('change')) {
   console.warn('!! คำเตือน: ยังไม่ได้เปลี่ยน JWT_SECRET ใน .env');
+}
+
+/*
+ * เตือนเรื่องที่พลาดกันบ่อยที่สุดตอนขึ้นคลาวด์
+ * ถ้ายังชี้ไป localhost อยู่ รูปภาพจะโหลดไม่ขึ้นบนมือถือ เพราะ localhost ของมือถือคือตัวมันเอง
+ */
+if (env.NODE_ENV === 'production' && env.PUBLIC_BASE_URL.includes('localhost')) {
+  console.warn('!! คำเตือน: PUBLIC_BASE_URL ยังเป็น localhost อยู่ รูปภาพจะโหลดไม่ขึ้น');
 }
 
 export default env;

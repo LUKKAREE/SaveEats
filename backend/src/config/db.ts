@@ -4,9 +4,36 @@
  * ใช้ Connection Pool เพราะเปิด-ปิด connection ใหม่ทุก request จะช้ามาก
  * Pool = เตรียม connection ไว้ล่วงหน้าหลายเส้น แล้วหมุนเวียนใช้
  */
+import fs from 'node:fs';
+
 import mysql from 'mysql2/promise';
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import env from './env';
+
+type SslConfig = { ca?: string; rejectUnauthorized: boolean };
+
+/**
+ * ตั้งค่าการเชื่อมต่อแบบเข้ารหัส
+ *
+ * XAMPP ในเครื่องไม่ต้องใช้ ส่วนฐานข้อมูลบนคลาวด์เกือบทุกเจ้าบังคับ
+ * เปิด-ปิดด้วย DB_SSL ในไฟล์ .env
+ *
+ * *** จุดที่คนติดกันมากที่สุดตอนขึ้นคลาวด์ ***
+ * ผู้ให้บริการอย่าง Aiven ออกใบรับรองด้วย CA ของตัวเอง ไม่ใช่ CA สาธารณะ
+ * ถ้าสั่งให้ตรวจใบรับรองแบบเต็มโดยไม่ได้บอกว่า CA คือใคร จะต่อไม่ติดทันที
+ * จึงแยกเป็น 2 ทาง
+ *   - ใส่ DB_SSL_CA ไว้ = เข้ารหัส + ตรวจว่าปลายทางเป็นตัวจริง (ดีที่สุด)
+ *   - ไม่ใส่            = เข้ารหัสอยู่ แต่ไม่ตรวจตัวตน (ต่อง่าย พอใช้ได้สำหรับงานเรียน)
+ */
+export function sslOptions(): { ssl?: SslConfig } {
+  if (!env.DB_SSL) return {};
+
+  const ca = env.DB_SSL_CA.trim();
+  if (ca === '') return { ssl: { rejectUnauthorized: false } };
+
+  const pem = ca.startsWith('-----BEGIN') ? ca : fs.readFileSync(ca, 'utf8');
+  return { ssl: { ca: pem, rejectUnauthorized: true } };
+}
 
 export const pool = mysql.createPool({
   host: env.DB_HOST,
@@ -18,10 +45,48 @@ export const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4_unicode_ci',
+  ...sslOptions(),
   /** คืนค่า DATETIME เป็นข้อความ 'YYYY-MM-DD HH:mm:ss' จะได้ไม่เพี้ยนเรื่อง timezone */
   dateStrings: true,
   /** คืนค่า DECIMAL เป็นตัวเลข ไม่ใช่ข้อความ (ถ้าไม่ตั้ง ราคาจะกลายเป็น string) */
   decimalNumbers: true,
+});
+
+/*
+ * ตั้งเขตเวลาให้ทุกการเชื่อมต่อที่ pool สร้างขึ้น
+ *
+ * *** ปัญหาที่บรรทัดนี้แก้ ***
+ * ฐานข้อมูลบนคลาวด์ตั้งเวลาเป็น UTC ซึ่งช้ากว่าไทย 7 ชั่วโมง
+ * ส่วน Node ของเราตั้งเป็นเวลาไทยแล้ว (ดู TZ ใน config/env.ts)
+ * ถ้าปล่อยให้สองฝั่งใช้คนละเขตเวลา จะเกิดอาการแบบนี้
+ *
+ *   - อาหารที่ยังไม่หมดเวลา หายจากหน้าลูกค้า เพราะ pickup_end > NOW() เทียบผิด
+ *   - งานอัตโนมัติปิดคิวหมดอายุช้าไป 7 ชั่วโมง ของค้างไม่ถูกคืน
+ *   - ยอดจองวันนี้บนแดชบอร์ดนับผิดวัน เพราะ CURDATE() คนละวันกับเวลาไทย
+ *   - เวลาที่แสดงในแอป เช่น แจ้งเมื่อ หรือ วันที่รีวิว เพี้ยนไป 7 ชั่วโมง
+ *
+ * บนเครื่องตัวเองไม่มีทางเจอ เพราะ Windows กับ MySQL ใช้เวลาไทยเหมือนกันอยู่แล้ว
+ *
+ * ตั้งที่ระดับ session ไม่ได้ไปแก้ตัวเซิร์ฟเวอร์ฐานข้อมูล
+ * จึงใช้ได้กับทุกผู้ให้บริการโดยไม่ต้องขอสิทธิ์อะไรเพิ่ม
+ */
+pool.on('connection', (conn) => {
+  /*
+   * *** จุดที่หลอกง่ายมาก ***
+   * ถึงแม้ pool จะเป็นแบบ promise แต่ตัว conn ที่ส่งมากับ event นี้เป็นการเชื่อมต่อดิบ
+   * ซึ่ง query() ยังเป็นแบบรับ callback อยู่ ถ้าเผลอไปใช้ await หรือ .catch() จะพังทันที
+   * ตัว mysql2 เองก็เตือนเรื่องนี้ไว้ในข้อความ error
+   */
+  type RawConnection = { query(sql: string, cb: (err: unknown) => void): void };
+  (conn as unknown as RawConnection).query(
+    `SET time_zone = '${env.DB_TIMEZONE}'`,
+    (err) => {
+      if (err !== null && err !== undefined) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('!! ตั้งเขตเวลาให้ฐานข้อมูลไม่สำเร็จ:', message);
+      }
+    }
+  );
 });
 
 /** ทดสอบว่าเชื่อมฐานข้อมูลได้จริงไหม (เรียกตอน server เริ่มทำงาน) */

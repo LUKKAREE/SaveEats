@@ -21,7 +21,18 @@ import type { ApiClientError, ApiErrorResponse } from '@shared/index';
  * Admin Web รันบนคอมเครื่องเดียวกับ Backend ใช้ localhost ได้เลย
  * (ต่างจากมือถือที่ต้องใช้ IP)
  */
-export const BASE_URL = 'http://localhost:3000';
+/*
+ * ที่อยู่ของ Backend
+ *
+ * ตอนพัฒนาในเครื่อง ไม่ต้องตั้งอะไร ใช้ localhost อัตโนมัติ
+ * ตอนขึ้นเว็บจริง ให้ตั้งค่า VITE_API_URL ในหน้าตั้งค่าของ Vercel
+ * เช่น  VITE_API_URL = https://saveeats-api.onrender.com
+ *
+ * *** ชื่อต้องขึ้นต้นด้วย VITE_ เท่านั้น ***
+ * Vite จะฝังเฉพาะตัวแปรที่ขึ้นต้นแบบนี้ลงในไฟล์ที่ build ออกมา
+ * ถ้าตั้งชื่ออื่นจะอ่านไม่เจอ แล้วเว็บจะวิ่งไปหา localhost เหมือนเดิม
+ */
+export const BASE_URL = import.meta.env['VITE_API_URL'] ?? 'http://localhost:3000';
 export const API_URL = `${BASE_URL}/api`;
 
 export const STORAGE_KEYS = {
