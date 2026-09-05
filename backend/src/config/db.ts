@@ -44,6 +44,22 @@ export const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  /*
+   * ค่า 4 ตัวนี้จำเป็นเฉพาะตอนฐานข้อมูลอยู่คนละที่กับ Backend
+   *
+   * *** ปัญหาที่แก้ : read ECONNRESET ***
+   * ฐานข้อมูลบนคลาวด์จะตัดการเชื่อมต่อที่นั่งว่างนาน ๆ ทิ้งเอง
+   * แต่ฝั่งเราไม่รู้ พอหยิบเส้นเดิมมาใช้อีกทีจึงเจอ error ทั้งที่ไม่มีอะไรผิด
+   * อาการจะโผล่มาเป็นครั้งคราวแบบไม่มีจังหวะแน่นอน หาสาเหตุยากมาก
+   *
+   * วิธีแก้คือปิดเส้นที่ว่างเกิน 1 นาทีทิ้งเองก่อนที่ปลายทางจะปิดให้
+   * และส่งสัญญาณ keep-alive เป็นระยะเพื่อบอกว่ายังใช้อยู่
+   * ตอนใช้ XAMPP ในเครื่องจะไม่มีปัญหานี้ เพราะคุยกันภายในเครื่องเดียว
+   */
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10_000,
+  idleTimeout: 60_000,
+  maxIdle: 2,
   charset: 'utf8mb4_unicode_ci',
   ...sslOptions(),
   /** คืนค่า DATETIME เป็นข้อความ 'YYYY-MM-DD HH:mm:ss' จะได้ไม่เพี้ยนเรื่อง timezone */

@@ -105,12 +105,24 @@ async function main(): Promise<void> {
     await conn.query(`SET time_zone = '${env.DB_TIMEZONE}'`);
     console.log('1. ต่อฐานข้อมูลสำเร็จ');
 
-    await conn.query(
-      `CREATE DATABASE IF NOT EXISTS \`${env.DB_NAME}\`
-         CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-    );
+    /*
+     * สร้างฐานข้อมูลเฉพาะตอนที่ยังไม่มีจริง ๆ
+     *
+     * เช็คก่อนแทนที่จะสั่ง CREATE DATABASE IF NOT EXISTS ไปเลย
+     * เพราะผู้ให้บริการบางเจ้าไม่ให้สิทธิ์สร้างฐานข้อมูลกับบัญชีที่แจกมา
+     * ถ้าสั่งไปทั้งที่มีอยู่แล้วจะโดนปฏิเสธเรื่องสิทธิ์ ทั้งที่จริง ๆ ไม่ต้องสร้างอะไรเลย
+     */
+    const [found] = await conn.query<RowDataPacket[]>('SHOW DATABASES LIKE ?', [env.DB_NAME]);
+    if (found.length === 0) {
+      await conn.query(
+        `CREATE DATABASE \`${env.DB_NAME}\`
+           CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+      );
+      console.log(`2. สร้างฐานข้อมูล ${env.DB_NAME} เรียบร้อย`);
+    } else {
+      console.log(`2. เจอฐานข้อมูล ${env.DB_NAME} อยู่แล้ว ใช้อันเดิม`);
+    }
     await conn.query(`USE \`${env.DB_NAME}\``);
-    console.log(`2. เตรียมฐานข้อมูล ${env.DB_NAME} เรียบร้อย`);
 
     const [existing] = await conn.query<RowDataPacket[]>('SHOW TABLES');
     const tableNames = existing.map((row) => String(Object.values(row)[0] as string));

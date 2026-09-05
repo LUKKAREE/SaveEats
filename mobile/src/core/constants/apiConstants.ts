@@ -34,7 +34,7 @@ type Mode = 'cloud' | 'lan';
  * ประกาศชนิดเป็น Mode (ไม่ใช่ค่าตายตัว) เพื่อให้ TypeScript ยอมให้เทียบทั้งสองค่า
  * ถ้าไม่ระบุชนิด มันจะมองว่าตัวแปรนี้เป็น 'lan' ตลอดกาล แล้วฟ้องว่าเทียบกับ 'cloud' ไม่มีทางจริง
  */
-const MODE = 'lan' as Mode;
+const MODE = 'cloud' as Mode;
 
 /**
  * ที่อยู่ของ Backend บนคลาวด์
@@ -42,7 +42,7 @@ const MODE = 'lan' as Mode;
  * *** ห้ามมีเครื่องหมาย / ปิดท้าย ***  ไม่งั้น URL จะกลายเป็น //api ซึ่งเรียกไม่ได้
  * เอาที่อยู่จริงจากหน้า Render มาใส่ แล้วเปลี่ยน MODE ข้างบนเป็น 'cloud'
  */
-const CLOUD_URL = 'https://saveeats-api.onrender.com';
+const CLOUD_URL = 'https://saveeats.onrender.com';
 
 // <<<< แก้เลข IP ตรงนี้ (ใช้เฉพาะโหมด lan) >>>>
 const DEV_HOST = '10.1.195.195';

@@ -85,6 +85,21 @@ export const env = {
    */
   DB_TIMEZONE: str('DB_TIMEZONE', '+07:00'),
 
+  /*
+   * ---- ที่เก็บรูปภาพบนคลาวด์ (Cloudinary) ----
+   *
+   * *** ปัญหาที่ 3 ค่านี้แก้ ***
+   * เซิร์ฟเวอร์ฟรีอย่าง Render เก็บไฟล์ถาวรไม่ได้
+   * รูปที่ร้านอัปโหลดจะหายทุกครั้งที่เซิร์ฟเวอร์หลับแล้วตื่น หรือ deploy ใหม่
+   * เหลือแต่ชื่อไฟล์ในฐานข้อมูลที่ชี้ไปหาของที่ไม่มีอยู่ กลายเป็นรูปแตก
+   *
+   * ถ้าเว้นทั้ง 3 ค่าไว้ ระบบจะเก็บรูปลงโฟลเดอร์ backend/uploads เหมือนเดิม
+   * ซึ่งใช้ได้ดีตอนรันในเครื่องตัวเอง จึงไม่ต้องตั้งค่าอะไรตอนพัฒนา
+   */
+  CLOUDINARY_CLOUD_NAME: str('CLOUDINARY_CLOUD_NAME', ''),
+  CLOUDINARY_API_KEY: str('CLOUDINARY_API_KEY', ''),
+  CLOUDINARY_API_SECRET: str('CLOUDINARY_API_SECRET', ''),
+
   JWT_SECRET: str('JWT_SECRET', 'saveeats_dev_secret_change_me'),
   JWT_EXPIRES_IN: str('JWT_EXPIRES_IN', '7d'),
 
@@ -120,6 +135,10 @@ if (env.NODE_ENV === 'production' && env.JWT_SECRET.includes('change')) {
  */
 if (env.NODE_ENV === 'production' && env.PUBLIC_BASE_URL.includes('localhost')) {
   console.warn('!! คำเตือน: PUBLIC_BASE_URL ยังเป็น localhost อยู่ รูปภาพจะโหลดไม่ขึ้น');
+}
+
+if (env.NODE_ENV === 'production' && env.CLOUDINARY_CLOUD_NAME === '') {
+  console.warn('!! คำเตือน: ยังไม่ได้ตั้งค่า Cloudinary รูปที่อัปโหลดจะหายเมื่อเซิร์ฟเวอร์รีสตาร์ท');
 }
 
 export default env;
