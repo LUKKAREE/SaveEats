@@ -19,7 +19,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import OsmMap, { OsmMarker } from '../../components/OsmMap';
 import type { UpdateStoreRequest } from '@shared/index';
 
 import ScreenContainer from '../../components/ScreenContainer';
@@ -300,9 +300,8 @@ export default function SellerEditStoreScreen({ route, navigation }: Props): JSX
             */}
             {hasPin ? (
               <View style={styles.mapPreview} pointerEvents="none">
-                <MapView
+                <OsmMap
                   style={StyleSheet.absoluteFill}
-                  provider={PROVIDER_GOOGLE}
                   region={{
                     latitude: latitude as number,
                     longitude: longitude as number,
@@ -311,17 +310,11 @@ export default function SellerEditStoreScreen({ route, navigation }: Props): JSX
                   }}
                   scrollEnabled={false}
                   zoomEnabled={false}
-                  toolbarEnabled={false}
                 >
-                  <Marker
+                  <OsmMarker
                     coordinate={{ latitude: latitude as number, longitude: longitude as number }}
-                    anchor={{ x: 0.5, y: 1 }}
-                  >
-                    <View style={styles.previewPin}>
-                      <Ionicons name="storefront" size={16} color={theme.colors.textOnPrimary} />
-                    </View>
-                  </Marker>
-                </MapView>
+                  />
+                </OsmMap>
               </View>
             ) : null}
 

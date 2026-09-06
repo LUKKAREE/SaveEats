@@ -15,7 +15,8 @@
  */
 import { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, Platform } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import OsmMap, { OsmMarker } from '../../../components/OsmMap';
+import type { OsmMapHandle } from '../../../components/OsmMap';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,14 +24,13 @@ import { theme } from '../../../core/theme/theme';
 import type { AppStackParamList } from '../../../navigation/types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-const PIN = require('../../../../assets/images/map-pin-store.png') as number;
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StoreLocation'>;
 
 export default function StoreLocationScreen({ route }: Props): JSX.Element {
   const { storeName, address, latitude, longitude } = route.params;
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<OsmMapHandle>(null);
 
   const coordinate = { latitude, longitude };
   const region = { ...coordinate, latitudeDelta: 0.006, longitudeDelta: 0.006 };
@@ -63,17 +63,13 @@ export default function StoreLocationScreen({ route }: Props): JSX.Element {
 
   return (
     <View style={styles.flex}>
-      <MapView
+      <OsmMap
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
         style={styles.flex}
         initialRegion={region}
-        showsUserLocation
-        showsMyLocationButton={false}
-        toolbarEnabled={false}
       >
-        <Marker coordinate={coordinate} image={PIN} anchor={{ x: 0.5, y: 1 }} title={storeName} />
-      </MapView>
+        <OsmMarker coordinate={coordinate} title={storeName} />
+      </OsmMap>
 
       {/* ---- ชื่อร้านลอยด้านบน ---- */}
       <View style={styles.nameCard}>

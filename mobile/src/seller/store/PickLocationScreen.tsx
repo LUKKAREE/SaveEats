@@ -20,8 +20,8 @@
 import { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
-import type { Region } from 'react-native-maps';
+import OsmMap from '../../components/OsmMap';
+import type { Region, OsmMapHandle } from '../../components/OsmMap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppButton from '../../components/AppButton';
@@ -45,7 +45,7 @@ const ZOOM = { latitudeDelta: 0.004, longitudeDelta: 0.004 };
 
 export default function PickLocationScreen({ route, navigation }: Props): JSX.Element {
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<OsmMapHandle>(null);
 
   const initial = route.params?.initial ?? null;
 
@@ -112,15 +112,11 @@ export default function PickLocationScreen({ route, navigation }: Props): JSX.El
 
   return (
     <View style={styles.flex}>
-      <MapView
+      <OsmMap
         ref={mapRef}
         style={StyleSheet.absoluteFill}
-        provider={PROVIDER_GOOGLE}
         initialRegion={initialRegion}
         onRegionChangeComplete={handleRegionChangeComplete}
-        showsUserLocation
-        showsMyLocationButton={false}
-        toolbarEnabled={false}
       />
 
       {/* ---- คำแนะนำด้านบน ---- */}

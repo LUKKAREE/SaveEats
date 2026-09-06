@@ -16,12 +16,10 @@
  * ผู้ใช้จะรู้สึกว่าหน้าค้าง จึงปิดการโต้ตอบทั้งหมดแล้วให้ทั้งการ์ดเป็นปุ่มแทน
  */
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import OsmMap, { OsmMarker } from './OsmMap';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../core/theme/theme';
 
-/** หมุดร้านสีเขียว (ไฟล์ PNG จริง ไม่ใช่ฟอนต์ไอคอน จะได้ไม่เพี้ยนบน Android) */
-const PIN = require('../../assets/images/map-pin-store.png') as number;
 
 interface StoreMapCardProps {
   storeName: string;
@@ -73,20 +71,15 @@ export default function StoreMapCard({
           แผนที่จึงกลายเป็นแค่ "ภาพ" ไม่แย่งการปัดหน้าจอไปจากผู้ใช้
         */}
         <View style={styles.mapFill} pointerEvents="none">
-          <MapView
-            provider={PROVIDER_GOOGLE}
+          <OsmMap
             style={styles.mapFill}
-            // 0.004 องศา ~ 400 เมตร กำลังเห็นซอยรอบ ๆ ร้านพอดี
+            /* 0.004 องศา ~ 400 เมตร กำลังเห็นซอยรอบ ๆ ร้านพอดี */
             initialRegion={{ ...coordinate, latitudeDelta: 0.004, longitudeDelta: 0.004 }}
             scrollEnabled={false}
             zoomEnabled={false}
-            rotateEnabled={false}
-            pitchEnabled={false}
-            toolbarEnabled={false}
-            liteMode
           >
-            <Marker coordinate={coordinate} image={PIN} anchor={{ x: 0.5, y: 1 }} />
-          </MapView>
+            <OsmMarker coordinate={coordinate} />
+          </OsmMap>
         </View>
 
         <View style={styles.overlay}>

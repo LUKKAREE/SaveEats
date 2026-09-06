@@ -58,6 +58,18 @@
           "cameraPermission": "SaveEats ใช้กล้องเพื่อถ่ายรูปอาหารที่จะลงขาย"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "cbe1bc40-814e-499a-afb2-fb4d8e23def8"
+      }
+    },
+    "owner": "pa0851546870",
+    "updates": {
+      "url": "https://u.expo.dev/cbe1bc40-814e-499a-afb2-fb4d8e23def8"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

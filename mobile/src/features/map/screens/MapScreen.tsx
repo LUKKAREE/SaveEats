@@ -36,8 +36,8 @@ import {
 } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
-import type { Region } from 'react-native-maps';
+import OsmMap, { OsmMarker, OsmCircle } from '../../../components/OsmMap';
+import type { Region, OsmMapHandle } from '../../../components/OsmMap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -73,8 +73,6 @@ type Navigation = NativeStackNavigationProp<CustomerStackParamList>;
  *
  * ไฟล์มี 3 ขนาด (.png / @2x / @3x) React Native เลือกให้เองตามความละเอียดจอ
  */
-const PIN_NORMAL = require('../../../../assets/images/map-pin-store.png') as number;
-const PIN_ACTIVE = require('../../../../assets/images/map-pin-store-active.png') as number;
 
 /** จุดกึ่งกลางกรุงเทพฯ ใช้ตอนยังไม่รู้ตำแหน่งผู้ใช้ */
 const FALLBACK_REGION: Region = {
@@ -111,7 +109,7 @@ export default function MapScreen(): JSX.Element {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
 
-  const mapRef = useRef<MapView | null>(null);
+  const mapRef = useRef<OsmMapHandle | null>(null);
   const listRef = useRef<FlatList<StoreWithDistance> | null>(null);
 
   const [stores, setStores] = useState<StoreWithDistance[]>([]);
@@ -314,27 +312,22 @@ export default function MapScreen(): JSX.Element {
       onLayout={(e: LayoutChangeEvent) => { setAreaHeight(e.nativeEvent.layout.height); }}
     >
       {/* ---- แผนที่เต็มจอ ---- */}
-      <MapView
+      <OsmMap
         ref={mapRef}
-        // Android ต้องระบุ provider ชัดเจน ส่วน iOS ปล่อยให้ใช้ Apple Maps
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         style={StyleSheet.absoluteFill}
         initialRegion={region}
-        showsUserLocation
-        showsMyLocationButton
-        // ดันปุ่ม "ตำแหน่งฉัน" ของ Google ลงมาไม่ให้ชนแถวปุ่มรัศมี
-        mapPadding={{ top: insets.top + 96, right: 0, bottom: PEEK_HEIGHT, left: 0 }}
-        // แตะที่ว่างบนแผนที่ = ยกเลิกการเลือกร้าน
+        /* จุดสีฟ้าบอกตำแหน่งเรา - ส่งพิกัดเข้าไปเอง ไม่ได้ให้แผนที่ไปขอ GPS ซ้ำ */
+        userLocation={position}
+        /* แตะที่ว่างบนแผนที่ = ยกเลิกการเลือกร้าน */
         onPress={() => setSelectedId(null)}
       >
         {/* วงรัศมีที่กำลังกรองอยู่ ให้เห็นด้วยตาว่า "ใกล้" แค่ไหน */}
         {position !== null ? (
-          <Circle
+          <OsmCircle
             center={position}
             radius={filters.radiusKm * 1000}
             strokeColor={theme.colors.primary}
-            strokeWidth={1.5}
-            fillColor="rgba(22, 163, 74, 0.10)"
+            fillColor={theme.colors.primary}
           />
         ) : null}
 
@@ -343,7 +336,7 @@ export default function MapScreen(): JSX.Element {
           const isSelected = selectedId === store.store_id;
 
           return (
-            <Marker
+            <OsmMarker
               key={store.store_id}
               coordinate={{
                 latitude: Number(store.latitude),
@@ -351,20 +344,13 @@ export default function MapScreen(): JSX.Element {
               }}
               title={store.store_name}
               description={formatDistance(store.distance_km)}
+              /* หมุดที่เลือกอยู่เป็นสีเข้มและใหญ่กว่า จะได้รู้ว่ากำลังดูร้านไหน */
+              selected={isSelected}
               onPress={() => handleMarkerPress(store)}
-              /*
-               * จุดยึดอยู่ปลายแหลมล่างสุด (x กึ่งกลาง, y ล่างสุด)
-               * ถ้าไม่ตั้ง หมุดจะเอาจุดกึ่งกลางรูปไปทาบพิกัด
-               * ทำให้ร้านดูเหมือนอยู่เหนือตำแหน่งจริงไปครึ่งหมุด
-               */
-              anchor={{ x: 0.5, y: 1 }}
-              image={isSelected ? PIN_ACTIVE : PIN_NORMAL}
-              // หมุดที่เลือกอยู่ต้องทับหมุดอื่นเสมอ ไม่งั้นโดนบังจนดูไม่ออกว่าเลือกอันไหน
-              zIndex={isSelected ? 10 : 1}
             />
           );
         })}
-      </MapView>
+      </OsmMap>
 
       {/* ---- ชั้นลอยด้านบน : จำนวนร้าน + ปุ่มกรองระยะทาง ---- */}
       <View
