@@ -11,12 +11,14 @@
  * ทั้ง 3 ข้อนี้ต้องเช็คที่ Backend เท่านั้น
  * เพราะถ้าเช็คแค่ในแอป ใครยิง API ตรงก็ข้ามได้หมด (กฎเหล็กข้อ 3)
  */
-import type { CreateReportRequest, Report, ReportStatus } from '@shared/index';
+import type { CreateReportRequest, Report, ReportMessage, ReportStatus } from '@shared/index';
 
 import ApiError from '../utils/ApiError';
 import { query } from '../config/db';
 import notificationService from './notificationService';
+import behaviorScoreService from './behaviorScoreService';
 import reportModel from '../models/reportModel';
+import reportMessageModel from '../models/reportMessageModel';
 import storeModel from '../models/storeModel';
 import postModel from '../models/postModel';
 import userModel from '../models/userModel';
@@ -38,7 +40,9 @@ export const reportService = {
    */
   async create(
     reporterId: number,
-    { targetType, targetId, reason }: CreateReportRequest
+    { targetType, targetId, reason }: CreateReportRequest,
+    /** ชื่อไฟล์หรือ URL ของรูปหลักฐาน มาจาก uploadedFilename() ที่ controller */
+    imageUrl: string | null = null
   ): Promise<Report> {
     // ---- 1) สิ่งที่แจ้งมีอยู่จริงไหม ----
     await assertTargetExists(targetType, targetId, reporterId);
@@ -76,6 +80,7 @@ export const reportService = {
       targetType,
       targetId,
       reason: reason.trim(),
+      imageUrl,
     });
 
     const created = await reportModel.findById(reportId);
@@ -95,15 +100,106 @@ export const reportService = {
    * "ผู้ใช้ทั่วไปควรเห็นไหม" ค่อยตัดสินใจว่าจะเพิ่มในรายการข้างล่างนี้หรือไม่
    */
   async listMine(reporterId: number): Promise<Report[]> {
-    return query<Report>(
-      `SELECT report_id, reporter_id, target_type, target_id, reason,
-              status, resolution_message, created_at, updated_at
-         FROM reports
-        WHERE reporter_id = ?
-        ORDER BY created_at DESC
+    const rows = await query<Report>(
+      `SELECT r.report_id, r.reporter_id, r.target_type, r.target_id, r.reason,
+              r.image_url, r.status, r.resolution_message, r.created_at, r.updated_at,
+              (SELECT COUNT(*) FROM report_messages m WHERE m.report_id = r.report_id)
+                AS message_count
+         FROM reports r
+        WHERE r.reporter_id = ?
+        ORDER BY r.created_at DESC
         LIMIT 50`,
       [reporterId]
     );
+
+    /*
+     * เติมชื่อของสิ่งที่ถูกแจ้งให้ทีหลัง
+     *
+     * *** ทำไมไม่ JOIN เอาใน SQL ข้างบนเลย ***
+     * target_id ชี้ไปได้ 5 ตาราง จะ JOIN ได้ต้องเขียน LEFT JOIN ครบทั้ง 5
+     * แล้วใช้ CASE เลือกคอลัมน์ กลายเป็น SQL ยาวที่อ่านยากและแก้ยากมาก
+     * ทั้งที่รายการนี้จำกัดไว้แค่ 50 แถว การไปตามชื่อทีหลังจึงคุ้มกว่ามาก
+     */
+    return attachTargetNames(rows);
+  },
+
+  /**
+   * ข้อความในเรื่องที่ตัวเองแจ้ง
+   *
+   * *** ต้องเช็คความเป็นเจ้าของทุกครั้ง ***
+   * ถ้าไม่เช็ค ใครก็เดาเลข report_id แล้วอ่านเรื่องของคนอื่นได้หมด
+   * ซึ่งในนั้นมีทั้งเรื่องส่วนตัวและชื่อร้านที่ถูกร้องเรียน
+   */
+  async listMyMessages(reporterId: number, reportId: number): Promise<ReportMessage[]> {
+    await assertOwnReport(reporterId, reportId);
+    const messages = await reportMessageModel.listByReport(reportId);
+
+    /*
+     * ตัดชื่อจริงของผู้ดูแลออกก่อนส่งให้ผู้ใช้
+     *
+     * *** ทำไมต้องตัด ***
+     * ผู้ใช้ควรเห็นว่ากำลังคุยกับ "ผู้ดูแลระบบ" ไม่ใช่กับพนักงานชื่อนั้นชื่อนี้
+     * เพราะเรื่องร้องเรียนเป็นงานที่กระทบผลประโยชน์ของคนอื่น
+     * การให้ชื่อพนักงานติดไปด้วยเปิดช่องให้ตามไปกดดันเป็นรายบุคคลได้
+     * ชื่อของผู้แจ้งเองไม่ต้องตัด เพราะเป็นชื่อตัวเขาเอง
+     */
+    return messages.map((m) =>
+      m.sender_role === 'admin' ? { ...m, sender_name: 'ผู้ดูแลระบบ' } : m
+    );
+  },
+
+  /**
+   * ผู้แจ้งส่งข้อความเพิ่มเข้าไปในเรื่องของตัวเอง
+   *
+   * *** ทำไมปิดเรื่องแล้วพิมพ์ไม่ได้ ***
+   * ถ้าเรื่องปิดไปแล้วยังพิมพ์ต่อได้ ข้อความจะไปกองอยู่ในเรื่องที่ไม่มีใครดูแล้ว
+   * ผู้ใช้จะเข้าใจว่ามีคนอ่านอยู่ทั้งที่ไม่มี ซึ่งแย่กว่าการบอกตรง ๆ ว่าเรื่องปิดแล้ว
+   * ถ้ายังมีปัญหาอยู่ ให้แจ้งเรื่องใหม่ ซึ่งจะเข้าคิวให้ผู้ดูแลเห็นจริง ๆ
+   */
+  async addMyMessage(reporterId: number, reportId: number, message: string): Promise<ReportMessage> {
+    const report = await assertOwnReport(reporterId, reportId);
+
+    if (report.status === 'resolved' || report.status === 'rejected') {
+      throw ApiError.badRequest(
+        'เรื่องนี้ปิดไปแล้ว ถ้ายังมีปัญหาอยู่ กรุณาแจ้งเป็นเรื่องใหม่'
+      );
+    }
+
+    return saveMessage(reportId, reporterId, 'reporter', message);
+  },
+
+  /** ผู้ดูแลอ่านข้อความในเรื่อง (ไม่ต้องเช็คความเป็นเจ้าของ เพราะดูแลทุกเรื่องอยู่แล้ว) */
+  async listMessagesForAdmin(reportId: number): Promise<ReportMessage[]> {
+    const report = await reportModel.findById(reportId);
+    if (!report) throw ApiError.notFound('ไม่พบเรื่องร้องเรียนนี้');
+    return reportMessageModel.listByReport(reportId);
+  },
+
+  /**
+   * ผู้ดูแลตอบกลับในเรื่อง
+   *
+   * *** ข้อความนี้ต่างจาก admin_note และ resolution_message อย่างไร ***
+   *   admin_note         บันทึกภายใน  ผู้แจ้งไม่เห็น
+   *   resolution_message ผลการตรวจสอบ ส่งถึง "ผู้ถูกแจ้ง"
+   *   ข้อความในห้องนี้    ส่งถึง "ผู้แจ้ง" ใช้ถามข้อมูลเพิ่มระหว่างตรวจสอบ
+   * สามอย่างนี้ไปคนละทางกัน ห้ามเอามารวมกันเด็ดขาด
+   */
+  async addAdminMessage(adminId: number, reportId: number, message: string): Promise<ReportMessage> {
+    const report = await reportModel.findById(reportId);
+    if (!report) throw ApiError.notFound('ไม่พบเรื่องร้องเรียนนี้');
+
+    const saved = await saveMessage(reportId, adminId, 'admin', message);
+
+    // ผู้แจ้งต้องรู้ทันทีว่าผู้ดูแลถามอะไรมา ไม่งั้นเรื่องจะค้างเพราะรอกันไปมา
+    await notificationService.notify({
+      userId: report.reporter_id,
+      title: 'ผู้ดูแลระบบส่งข้อความถึงคุณ',
+      message: saved.message,
+      type: 'report',
+      refId: report.report_id,
+    });
+
+    return saved;
   },
 
   /**
@@ -121,12 +217,22 @@ export const reportService = {
    * *** ทำไม rejected ไม่แจ้งร้าน ***
    * rejected แปลว่าตรวจแล้วไม่พบความผิด การไปบอกร้านว่า "มีคนแจ้งคุณนะ
    * แต่ไม่ผิด" มีแต่ทำให้ร้านเสียความรู้สึกโดยเปล่าประโยชน์
+   *
+   * *** ปิดเรื่องแล้วต้องเกิดผลจริง ไม่ใช่แค่เปลี่ยนคำในตาราง ***
+   * เดิมการกด "จบเรื่อง" เปลี่ยนแค่สถานะกับส่งแจ้งเตือน ร้านที่ถูกแจ้งซ้ำ ๆ
+   * กับร้านที่ไม่เคยถูกแจ้งเลยจึงไม่ต่างกันในสายตาระบบ
+   * ตอนนี้ผู้ดูแลติ๊ก penalizeStore มาได้ ระบบจะไปตัดคะแนนความประพฤติของร้าน
+   * ผ่าน behaviorScoreService ซึ่งมีกติกาเตือน/ระงับร้านอัตโนมัติอยู่แล้ว
+   * เรื่องร้องเรียนกับคะแนนความประพฤติจึงกลายเป็นระบบเดียวกัน
+   *
+   * @param penalizeStore ตัดคะแนนร้านด้วยหรือไม่ มีผลเฉพาะตอน status = resolved
    */
   async updateByAdmin(
     reportId: number,
     status: ReportStatus,
     adminNote: string | null,
-    resolutionMessage: string | null
+    resolutionMessage: string | null,
+    penalizeStore = false
   ): Promise<Report> {
     const before = await reportModel.findById(reportId);
     if (!before) throw ApiError.notFound('ไม่พบเรื่องร้องเรียนนี้');
@@ -171,9 +277,181 @@ export const reportService = {
       }
     }
 
+    // ---- 3) ตัดคะแนนร้าน เมื่อผู้ดูแลยืนยันว่าร้านผิดจริง ----
+    if (status === 'resolved' && penalizeStore) {
+      await penalizeStoreForReport(updated.target_type, updated.target_id, updated.report_id);
+    }
+
     return updated;
   },
 };
+
+/**
+ * ตัดคะแนนความประพฤติของร้านที่ถูกแจ้ง
+ *
+ * *** ทำไมหาเจอบ้างไม่เจอบ้างแล้วไม่ throw ***
+ * เรื่องร้องเรียนบางประเภทไม่ได้ผูกกับร้านเลย (แจ้งรีวิว = ของลูกค้า, แจ้งผู้ใช้)
+ * และของที่ถูกแจ้งอาจถูกลบไปแล้วระหว่างรอตรวจสอบ
+ * ถ้าโยน error ออกไป ผู้ดูแลจะปิดเรื่องไม่ได้เลยทั้งที่ตรวจเสร็จแล้ว
+ * จึงเลือกข้ามการตัดคะแนนแล้วเขียน log ไว้แทน เรื่องยังปิดได้ตามปกติ
+ */
+async function penalizeStoreForReport(
+  targetType: CreateReportRequest['targetType'],
+  targetId: number,
+  reportId: number
+): Promise<void> {
+  const storeId = await findTargetStoreId(targetType, targetId);
+  if (storeId === null) {
+    console.warn(`!! เรื่องร้องเรียน #${String(reportId)} ไม่ได้ผูกกับร้าน จึงข้ามการตัดคะแนน`);
+    return;
+  }
+
+  await behaviorScoreService.applyRule(
+    storeId,
+    'CONFIRMED_REPORT',
+    `ผู้ดูแลระบบตรวจสอบเรื่องร้องเรียน #${String(reportId)} แล้วพบความผิดจริง`
+  );
+}
+
+/**
+ * แปลง target_type + target_id เป็น store_id ของร้านที่ต้องรับผิดชอบ
+ *
+ * คืน null เมื่อเรื่องนั้นไม่ได้ผูกกับร้าน หรือหาของไม่เจอแล้ว
+ *   - review  รีวิวเป็นของลูกค้า ไม่ใช่ของร้าน จึงตัดคะแนนร้านไม่ได้
+ *   - user    แจ้งตัวบุคคล ไม่เกี่ยวกับร้าน
+ */
+async function findTargetStoreId(
+  targetType: CreateReportRequest['targetType'],
+  targetId: number
+): Promise<number | null> {
+  switch (targetType) {
+    case 'store': {
+      const store = await storeModel.findById(targetId);
+      return store?.store_id ?? null;
+    }
+
+    case 'post': {
+      const post = await postModel.findById(targetId);
+      return post?.store_id ?? null;
+    }
+
+    case 'reservation': {
+      const reservation = await reservationModel.findById(targetId);
+      return reservation?.store_id ?? null;
+    }
+
+    case 'review':
+    case 'user':
+      return null;
+
+    default: {
+      const exhaustive: never = targetType;
+      throw ApiError.badRequest(`ประเภทของสิ่งที่แจ้งไม่ถูกต้อง: ${String(exhaustive)}`);
+    }
+  }
+}
+
+/**
+ * เช็คว่าเรื่องนี้เป็นของคนที่กำลังเรียกจริง แล้วคืนตัวเรื่องกลับไปให้ใช้ต่อ
+ *
+ * คืน 404 ทั้งกรณีไม่มีเรื่องนี้ และกรณีเป็นเรื่องของคนอื่นโดยตั้งใจ
+ * ถ้าตอบ 403 เมื่อเป็นของคนอื่น เท่ากับบอกว่า "เลขนี้มีอยู่จริงนะ แค่ไม่ใช่ของคุณ"
+ * ซึ่งทำให้ไล่เดาเลขจนรู้ได้ว่าระบบมีเรื่องร้องเรียนทั้งหมดกี่เรื่อง
+ */
+async function assertOwnReport(reporterId: number, reportId: number): Promise<Report> {
+  const report = await reportModel.findById(reportId);
+  if (!report || report.reporter_id !== reporterId) {
+    throw ApiError.notFound('ไม่พบเรื่องร้องเรียนนี้');
+  }
+  return report;
+}
+
+/** บันทึกข้อความแล้วอ่านกลับมาให้ครบฟิลด์ (จะได้มีชื่อคนพิมพ์ติดมาด้วย) */
+async function saveMessage(
+  reportId: number,
+  senderId: number,
+  senderRole: ReportMessage['sender_role'],
+  message: string
+): Promise<ReportMessage> {
+  const messageId = await reportMessageModel.create({
+    reportId,
+    senderId,
+    senderRole,
+    message: message.trim(),
+  });
+
+  const saved = await reportMessageModel.findById(messageId);
+  if (!saved) throw ApiError.notFound('บันทึกข้อความไม่สำเร็จ');
+  return saved;
+}
+
+/**
+ * เติมชื่อของสิ่งที่ถูกแจ้งเข้าไปในแต่ละเรื่อง
+ *
+ * *** ทำไมต้องมีตัวจำ (cache) ***
+ * ผู้ใช้คนหนึ่งมักแจ้งร้านเดิมหรือการจองเดิมหลายรอบ ถ้าไม่จำไว้
+ * จะยิงคำถามเดิมไปที่ฐานข้อมูลซ้ำ ๆ โดยได้คำตอบเหมือนเดิมทุกครั้ง
+ *
+ * ของที่ถูกลบไปแล้วจะได้ null ฝั่งแอปต้องเผื่อกรณีนี้เสมอ
+ */
+async function attachTargetNames(reports: Report[]): Promise<Report[]> {
+  const cache = new Map<string, string | null>();
+
+  const result: Report[] = [];
+  for (const report of reports) {
+    const key = `${report.target_type}:${String(report.target_id)}`;
+
+    let name = cache.get(key);
+    if (name === undefined) {
+      name = await findTargetName(report.target_type, report.target_id);
+      cache.set(key, name);
+    }
+
+    result.push({ ...report, target_name: name });
+  }
+  return result;
+}
+
+/** หาชื่อที่คนอ่านแล้วรู้ว่าหมายถึงอะไร ไม่ใช่เลข id */
+async function findTargetName(
+  targetType: CreateReportRequest['targetType'],
+  targetId: number
+): Promise<string | null> {
+  switch (targetType) {
+    case 'store': {
+      const store = await storeModel.findById(targetId);
+      return store?.store_name ?? null;
+    }
+
+    case 'post': {
+      const post = await postModel.findById(targetId);
+      return post === null ? null : `${post.food_name} จาก ${post.store_name}`;
+    }
+
+    case 'reservation': {
+      const reservation = await reservationModel.findById(targetId);
+      return reservation === null
+        ? null
+        : `${reservation.food_name} จาก ${reservation.store_name}`;
+    }
+
+    case 'review': {
+      const review = await reviewModel.findById(targetId);
+      if (review === null) return null;
+      return `รีวิว ${String(review.rating)} ดาว จาก ${review.customer_name ?? 'ลูกค้า'}`;
+    }
+
+    case 'user': {
+      const user = await userModel.findById(targetId);
+      return user?.name ?? null;
+    }
+
+    default: {
+      const exhaustive: never = targetType;
+      throw ApiError.badRequest(`ประเภทของสิ่งที่แจ้งไม่ถูกต้อง: ${String(exhaustive)}`);
+    }
+  }
+}
 
 /** ตัดช่องว่างหัวท้าย ถ้าเหลือว่างเปล่าให้ถือว่าไม่ได้กรอกมา */
 function trimOrNull(value: string | null): string | null {

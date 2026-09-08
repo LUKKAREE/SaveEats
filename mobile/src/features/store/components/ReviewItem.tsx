@@ -1,8 +1,12 @@
 /**
  * รีวิว 1 รายการ
  * ใช้ทั้งในหน้ารายละเอียดร้าน (ฝั่งลูกค้า) และหน้ารีวิวของร้าน (ฝั่งร้าน)
+ *
+ * *** ปุ่มแจ้งรีวิวโผล่เฉพาะตอนส่ง onReport เข้ามา ***
+ * ฝั่งลูกค้าที่กำลังอ่านรีวิวร้านอื่นไม่ต้องเห็นปุ่มนี้ จึงไม่ส่ง onReport มา
+ * ส่วนฝั่งร้านที่เจอรีวิวไม่เป็นธรรมกับร้านตัวเอง ต้องมีทางร้องเรียนได้
  */
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Review } from '@shared/index';
 
@@ -10,7 +14,13 @@ import { imageUrl } from '../../../core/constants/apiConstants';
 import { formatRelativeTime } from '../../../core/utils/formatters';
 import { theme } from '../../../core/theme/theme';
 
-export default function ReviewItem({ review }: { review: Review }): JSX.Element {
+interface ReviewItemProps {
+  review: Review;
+  /** ส่งมาเมื่อผู้ที่กำลังดูมีสิทธิ์แจ้งรีวิวนี้ (ฝั่งร้าน) */
+  onReport?: () => void;
+}
+
+export default function ReviewItem({ review, onReport }: ReviewItemProps): JSX.Element {
   const avatar = imageUrl(review.customer_avatar ?? null, 'profile');
   const name = review.customer_name ?? `ผู้ใช้ #${review.customer_id}`;
 
@@ -47,6 +57,19 @@ export default function ReviewItem({ review }: { review: Review }): JSX.Element 
       {review.comment !== null && review.comment.trim() !== '' ? (
         <Text style={styles.comment}>{review.comment}</Text>
       ) : null}
+
+      {onReport !== undefined ? (
+        <TouchableOpacity
+          style={styles.reportButton}
+          activeOpacity={0.7}
+          onPress={onReport}
+          // ตัวหนังสือเล็ก ขยายพื้นที่กดให้นิ้วโป้งกดโดนง่าย
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="flag-outline" size={13} color={theme.colors.textMuted} />
+          <Text style={styles.reportText}>แจ้งรีวิวนี้</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -76,4 +99,12 @@ const styles = StyleSheet.create({
   starRow: { flexDirection: 'row', alignItems: 'center', gap: 1, marginTop: 1 },
   time: { ...theme.textStyles.caption, marginLeft: theme.spacing.sm },
   comment: { ...theme.textStyles.body, marginTop: theme.spacing.sm },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 4,
+    marginTop: theme.spacing.sm,
+  },
+  reportText: { ...theme.textStyles.caption, color: theme.colors.textMuted },
 });

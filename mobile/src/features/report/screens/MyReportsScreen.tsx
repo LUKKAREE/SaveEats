@@ -14,9 +14,12 @@
  * ชนิด navigation จึงใช้ AppStackParamList ที่ครอบทั้งสอง stack
  */
 import { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import {
+  View, Text, Image, FlatList, StyleSheet, RefreshControl, TouchableOpacity,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Report, ReportStatus, ReportTargetType } from '@shared/index';
 import { REPORT_STATUS_LABEL } from '@shared/index';
 
@@ -27,7 +30,11 @@ import EmptyState from '../../../components/EmptyState';
 import reportService from '../reportService';
 import { errorMessage } from '../../../core/services/apiClient';
 import { formatRelativeTime } from '../../../core/utils/formatters';
+import { imageUrl } from '../../../core/constants/apiConstants';
 import { theme } from '../../../core/theme/theme';
+import type { AppStackParamList } from '../../../navigation/types';
+
+type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
 /**
  * สีประจำแต่ละสถานะ
@@ -65,6 +72,7 @@ const TARGET_LABEL: Record<ReportTargetType, string> = {
 };
 
 export default function MyReportsScreen(): JSX.Element {
+  const navigation = useNavigation<Navigation>();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -151,17 +159,36 @@ export default function MyReportsScreen(): JSX.Element {
         }
         renderItem={({ item }) => {
           const badge = STATUS_STYLE[item.status];
+          const evidence = imageUrl(item.image_url, 'report');
+          const replies = item.message_count ?? 0;
 
           return (
-            <View style={styles.card}>
+            /*
+             * กดการ์ดเข้าหน้ารายละเอียด ซึ่งมีห้องคุยกับผู้ดูแล
+             * หน้านี้เลยทำหน้าที่เป็น "กล่องจดหมาย" ส่วนรายละเอียดอยู่ข้างใน
+             */
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('ReportDetail', { reportId: item.report_id })}
+            >
               <View style={styles.header}>
-                <Text style={styles.target}>
-                  {TARGET_LABEL[item.target_type]} #{item.target_id}
+                <Text style={styles.target} numberOfLines={1}>
+                  {/*
+                    แสดงชื่อของสิ่งที่แจ้ง ไม่ใช่เลข id
+                    เดิมขึ้นว่า "การจอง #12" ซึ่งผู้ใช้แยกไม่ออกว่าคือรายการไหน
+                    เพราะเลขนี้เป็นเลขในฐานข้อมูล ไม่เคยแสดงที่อื่นในแอปเลย
+                  */}
+                  {TARGET_LABEL[item.target_type]} · {item.target_name ?? 'ถูกลบไปแล้ว'}
                 </Text>
                 <Text style={styles.time}>{formatRelativeTime(item.created_at)}</Text>
               </View>
 
               <Text style={styles.reason}>{item.reason}</Text>
+
+              {evidence !== null ? (
+                <Image source={{ uri: evidence }} style={styles.evidence} resizeMode="cover" />
+              ) : null}
 
               <View style={styles.statusRow}>
                 <Ionicons name={badge.icon} size={15} color={badge.color} />
@@ -185,7 +212,15 @@ export default function MyReportsScreen(): JSX.Element {
                   <Text style={styles.replyText}>{item.resolution_message}</Text>
                 </View>
               ) : null}
-            </View>
+
+              <View style={styles.cardFoot}>
+                <Ionicons name="chatbubble-ellipses-outline" size={13} color={theme.colors.textMuted} />
+                <Text style={styles.cardFootText}>
+                  {replies === 0 ? 'แตะเพื่อคุยกับผู้ดูแล' : `มีข้อความ ${String(replies)} รายการ`}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
           );
         }}
       />
@@ -196,6 +231,24 @@ export default function MyReportsScreen(): JSX.Element {
 const styles = StyleSheet.create({
   list: { padding: theme.spacing.md, paddingBottom: theme.spacing.xxl },
   summary: { ...theme.textStyles.caption, marginBottom: theme.spacing.sm },
+
+  evidence: {
+    width: '100%',
+    height: 140,
+    borderRadius: theme.radius.md,
+    marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  cardFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  cardFootText: { ...theme.textStyles.caption, color: theme.colors.textMuted, flex: 1 },
 
   card: {
     backgroundColor: theme.colors.surface,

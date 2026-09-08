@@ -125,8 +125,23 @@ export default function SellerReservationListScreen(): JSX.Element {
             tintColor={theme.colors.primary}
           />
         }
+        /*
+         * กดการ์ดแล้วเข้าหน้ารายละเอียดการจอง (หน้าเดียวกับฝั่งลูกค้า)
+         *
+         * *** ทำไมต้องกดเข้าไปได้ ***
+         * ในหน้ารายละเอียดมีปุ่ม "แจ้งปัญหาเกี่ยวกับการจองนี้" อยู่แล้ว
+         * และ Backend ก็อนุญาตให้เจ้าของร้านแจ้งได้ตั้งแต่แรก
+         * แต่เดิมการ์ดนี้กดไม่ได้ ร้านจึงไปถึงหน้านั้นไม่ได้เลย
+         * ความสามารถที่มีอยู่จึงถูกใช้ไม่ได้จริง เพราะขาดทางเข้าแค่จุดเดียว
+         */
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.7}
+            onPress={() =>
+              navigation.navigate('ReservationDetail', { reservationId: item.reservation_id })
+            }
+          >
             <View style={styles.cardTop}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.foodName}>
@@ -155,7 +170,12 @@ export default function SellerReservationListScreen(): JSX.Element {
               </View>
               <Text style={styles.total}>{formatPrice(item.total_price)}</Text>
             </View>
-          </View>
+
+            <View style={styles.cardHint}>
+              <Text style={styles.cardHintText}>ดูรายละเอียด / แจ้งปัญหา</Text>
+              <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+            </View>
+          </TouchableOpacity>
         )}
         ListEmptyComponent={
           error !== null ? (
@@ -235,4 +255,13 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   total: { ...theme.textStyles.price, fontSize: 18 },
+
+  cardHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 2,
+    marginTop: theme.spacing.xs,
+  },
+  cardHintText: { ...theme.textStyles.caption, color: theme.colors.textMuted },
 });

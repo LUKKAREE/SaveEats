@@ -6,10 +6,12 @@ import type { Request, Response } from 'express';
 import type {
   StoreStatus, ReportStatus, DashboardStats, DailyCount,
   RejectStoreRequest, SetUserActiveRequest, AdjustBehaviorRequest, UpdateReportRequest,
+  CreateReportMessageRequest,
 } from '@shared/index';
 
 import ApiError from '../utils/ApiError';
-import { ok, paginated } from '../utils/response';
+import { ok, created, paginated } from '../utils/response';
+import { requireAuth } from '../utils/auth';
 import { qStr, qNum, qBool, paramId, pageParams } from '../utils/query';
 
 import userModel from '../models/userModel';
@@ -244,9 +246,29 @@ export const adminController = {
       paramId(req),
       body.status,
       body.adminNote ?? null,
-      body.resolutionMessage ?? null
+      body.resolutionMessage ?? null,
+      body.penalizeStore === true
     );
     ok(res, updated, 'อัปเดตสถานะการแจ้งปัญหาแล้ว');
+  },
+
+  /** GET /api/admin/reports/:id/messages - อ่านบทสนทนาของเรื่องนั้น */
+  async listReportMessages(req: Request, res: Response): Promise<void> {
+    ok(res, await reportService.listMessagesForAdmin(paramId(req)));
+  },
+
+  /**
+   * POST /api/admin/reports/:id/messages - ผู้ดูแลตอบกลับผู้แจ้ง
+   *
+   * ใช้ตอนอยากถามข้อมูลเพิ่มก่อนตัดสิน เช่น ขอรูปเพิ่ม หรือถามเวลาที่เกิดเรื่อง
+   * เดิมทำไม่ได้ ต้องเดาจากข้อความเดียวที่ผู้ใช้พิมพ์มาตอนแจ้ง
+   */
+  async addReportMessage(req: Request, res: Response): Promise<void> {
+    const admin = requireAuth(req);
+    const body = req.body as CreateReportMessageRequest;
+
+    const saved = await reportService.addAdminMessage(admin.userId, paramId(req), body.message);
+    created(res, saved, 'ส่งข้อความถึงผู้แจ้งแล้ว');
   },
 
   /** GET /api/admin/behavior */

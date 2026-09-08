@@ -10,13 +10,16 @@ export interface CreateReportInput {
   targetType: ReportTargetType;
   targetId: number;
   reason: string;
+  /** ชื่อไฟล์ (ตอนรันในเครื่อง) หรือ URL เต็ม (ตอนใช้ Cloudinary) */
+  imageUrl?: string | null;
 }
 
 export const reportModel = {
   async create(input: CreateReportInput): Promise<number> {
     const result = await execute(
-      'INSERT INTO reports (reporter_id, target_type, target_id, reason) VALUES (?, ?, ?, ?)',
-      [input.reporterId, input.targetType, input.targetId, input.reason]
+      `INSERT INTO reports (reporter_id, target_type, target_id, reason, image_url)
+       VALUES (?, ?, ?, ?, ?)`,
+      [input.reporterId, input.targetType, input.targetId, input.reason, input.imageUrl ?? null]
     );
     return result.insertId;
   },
@@ -30,7 +33,13 @@ export const reportModel = {
   }): Promise<{ items: Report[]; total: number }> {
     const pg = paginate(page, limit);
     const items = await query<Report>(
-      `SELECT r.*, u.name AS reporter_name, u.email AS reporter_email
+      /*
+       * นับข้อความในห้องสนทนามาด้วย ผู้ดูแลจะได้เห็นตั้งแต่หน้ารายการว่า
+       * เรื่องไหนมีการคุยกันอยู่ ไม่ต้องกดเข้าไปดูทีละเรื่องเพื่อหาว่ามีใครตอบมาไหม
+       */
+      `SELECT r.*, u.name AS reporter_name, u.email AS reporter_email,
+              (SELECT COUNT(*) FROM report_messages m WHERE m.report_id = r.report_id)
+                AS message_count
          FROM reports r JOIN users u ON u.user_id = r.reporter_id
         WHERE (? = '' OR r.status = ?)
         ORDER BY r.created_at DESC ${pg.sql}`,

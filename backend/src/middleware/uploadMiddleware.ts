@@ -29,7 +29,7 @@ export const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const MAX_SIZE_MB = 5;
 
 /** โฟลเดอร์ปลายทางที่อนุญาต */
-export type UploadFolder = 'food' | 'store' | 'profile';
+export type UploadFolder = 'food' | 'store' | 'profile' | 'report';
 
 /** ข้อจำกัดและการคัดกรองไฟล์ ใช้ร่วมกันทั้งสองแบบ */
 const limits = { fileSize: MAX_SIZE_MB * 1024 * 1024 };

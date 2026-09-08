@@ -69,6 +69,8 @@ DELETE FROM behavior_scores;
 DELETE FROM favorites;
 DELETE FROM notifications;
 DELETE FROM password_resets;
+-- ล้างห้องสนทนาก่อนตัวเรื่อง (report_messages อ้างถึง reports)
+DELETE FROM report_messages;
 DELETE FROM reports;
 DELETE FROM reviews;
 DELETE FROM reservations;
@@ -125,6 +127,7 @@ ALTER TABLE reviews          AUTO_INCREMENT = 1;
 ALTER TABLE favorites        AUTO_INCREMENT = 1;
 ALTER TABLE notifications    AUTO_INCREMENT = 1;
 ALTER TABLE reports          AUTO_INCREMENT = 1;
+ALTER TABLE report_messages  AUTO_INCREMENT = 1;
 ALTER TABLE password_resets  AUTO_INCREMENT = 1;
 ALTER TABLE behavior_logs    AUTO_INCREMENT = 1;
 

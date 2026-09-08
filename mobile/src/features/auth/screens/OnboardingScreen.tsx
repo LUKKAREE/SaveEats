@@ -20,9 +20,9 @@
  */
 import { useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, FlatList,
+  View, Text, Image, StyleSheet, TouchableOpacity, useWindowDimensions, FlatList,
 } from 'react-native';
-import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import type { NativeSyntheticEvent, NativeScrollEvent, ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -37,7 +37,10 @@ interface OnboardingScreenProps {
 
 interface Slide {
   key: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  /** ใช้เมื่อสไลด์นั้นแทนด้วยไอคอนสำเร็จรูป */
+  icon?: keyof typeof Ionicons.glyphMap;
+  /** ใช้เมื่อสไลด์นั้นต้องการรูปจริง เช่น โลโก้แบรนด์ (มาก่อน icon) */
+  image?: ImageSourcePropType;
   title: string;
   description: string;
 }
@@ -45,7 +48,8 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     key: 'welcome',
-    icon: 'leaf',
+    // สไลด์แรกใช้โลโก้ตัวเดียวกับไอคอนแอป ไม่ใช่ไอคอนใบไม้แบบเดิม
+    image: require('../../../../assets/images/logo-mark-green.png') as ImageSourcePropType,
     title: APP_NAME,
     description: 'ร่วมกันลดขยะอาหาร\nเพื่อโลก เพื่อเรา เพื่ออนาคต',
   },
@@ -99,7 +103,11 @@ export default function OnboardingScreen({ onDone }: OnboardingScreenProps): JSX
         renderItem={({ item }) => (
           <View style={[styles.slide, { width }]}>
             <View style={styles.iconCircle}>
-              <Ionicons name={item.icon} size={72} color={theme.colors.primary} />
+              {item.image !== undefined ? (
+                <Image source={item.image} style={styles.slideImage} resizeMode="contain" />
+              ) : (
+                <Ionicons name={item.icon ?? 'leaf'} size={72} color={theme.colors.primary} />
+              )}
             </View>
 
             <Text style={styles.title}>{item.title}</Text>
@@ -157,6 +165,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: theme.spacing.xl,
   },
+  slideImage: { width: 96, height: 96 },
   title: {
     ...theme.textStyles.title,
     color: theme.colors.primaryDark,

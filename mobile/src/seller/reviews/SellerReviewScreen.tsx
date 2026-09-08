@@ -13,7 +13,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Review } from '@shared/index';
 
 import ScreenContainer from '../../components/ScreenContainer';
@@ -27,6 +28,9 @@ import reviewService from '../../features/review/reviewService';
 import type { StoreReviews } from '../../features/review/reviewService';
 import { errorMessage } from '../../core/services/apiClient';
 import { theme } from '../../core/theme/theme';
+import type { SellerStackParamList } from '../../navigation/types';
+
+type Navigation = NativeStackNavigationProp<SellerStackParamList>;
 
 /** ตัวกรอง : ทั้งหมด / ต้องปรับปรุง (1-2 ดาว) / ชื่นชม (4-5 ดาว) */
 type ReviewFilter = 'all' | 'bad' | 'good';
@@ -38,6 +42,7 @@ const FILTERS: Array<{ value: ReviewFilter; label: string }> = [
 ];
 
 export default function SellerReviewScreen(): JSX.Element {
+  const navigation = useNavigation<Navigation>();
   const [reviews, setReviews] = useState<StoreReviews | null>(null);
   const [average, setAverage] = useState(0);
   const [filter, setFilter] = useState<ReviewFilter>('all');
@@ -169,7 +174,22 @@ export default function SellerReviewScreen(): JSX.Element {
             }
           />
         }
-        renderItem={({ item }) => <ReviewItem review={item} />}
+        /*
+         * ส่ง onReport เข้าไป ปุ่ม "แจ้งรีวิวนี้" จึงโผล่เฉพาะฝั่งร้าน
+         * Backend กันไว้อยู่แล้วว่าคนเขียนรีวิวเองแจ้งรีวิวตัวเองไม่ได้
+         */
+        renderItem={({ item }) => (
+          <ReviewItem
+            review={item}
+            onReport={() =>
+              navigation.navigate('Report', {
+                targetType: 'review',
+                targetId: item.review_id,
+                targetName: `รีวิว ${String(item.rating)} ดาว จาก ${item.customer_name ?? 'ลูกค้า'}`,
+              })
+            }
+          />
+        )}
       />
     </ScreenContainer>
   );

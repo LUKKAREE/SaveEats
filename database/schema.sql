@@ -337,6 +337,8 @@ CREATE TABLE reports (
   target_type   ENUM('store','post','review','user','reservation') NOT NULL,
   target_id     INT UNSIGNED NOT NULL,
   reason        VARCHAR(500) NOT NULL,
+  -- รูปหลักฐานที่ผู้แจ้งแนบมา (ไม่บังคับ) เก็บชื่อไฟล์ตอนอยู่ในเครื่อง / URL เต็มตอนขึ้นคลาวด์
+  image_url     VARCHAR(500) DEFAULT NULL,
   status        ENUM('open','reviewing','resolved','rejected') NOT NULL DEFAULT 'open',
   -- บันทึกภายในของผู้ดูแล ห้ามแสดงให้ผู้ใช้ทั่วไปเห็น (อาจมีชื่อคนแจ้งอยู่)
   admin_note    VARCHAR(500) DEFAULT NULL,
@@ -348,6 +350,33 @@ CREATE TABLE reports (
   KEY idx_reports_status (status),
   KEY idx_reports_target (target_type, target_id),
   CONSTRAINT fk_reports_reporter FOREIGN KEY (reporter_id)
+    REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+--  ข้อความโต้ตอบภายในเรื่องที่แจ้ง (migration_05)
+--
+--  *** ใครอยู่ในห้องสนทนานี้ : ผู้แจ้ง กับ ผู้ดูแล เท่านั้น ***
+--  ผู้ถูกแจ้งไม่อยู่ในนี้ เพราะทั้งระบบออกแบบให้ผู้ถูกแจ้งไม่รู้ว่าใครแจ้ง
+--  ถ้าดึงเขาเข้ามาคุยด้วย ตัวตนคนแจ้งจะหลุดจากสำนวนหรือรายละเอียดทันที
+--
+--  *** ทำไมเก็บ sender_role ทั้งที่รู้ได้จาก users.role ***
+--  บทบาทของบัญชีเปลี่ยนได้ แต่ประวัติการสนทนาต้องไม่เปลี่ยนตาม
+--  ถ้า JOIN เอาตอนอ่าน ข้อความเก่าของผู้ดูแลอาจกลายเป็นของลูกค้า
+--  เพียงเพราะบัญชีนั้นถูกลดสิทธิ์ทีหลัง
+-- ---------------------------------------------------------------------
+CREATE TABLE report_messages (
+  message_id  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  report_id   INT UNSIGNED NOT NULL,
+  sender_id   INT UNSIGNED NOT NULL,
+  sender_role ENUM('reporter','admin') NOT NULL,
+  message     VARCHAR(1000) NOT NULL,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (message_id),
+  KEY idx_report_messages_report (report_id, created_at),
+  CONSTRAINT fk_report_messages_report FOREIGN KEY (report_id)
+    REFERENCES reports (report_id) ON DELETE CASCADE,
+  CONSTRAINT fk_report_messages_sender FOREIGN KEY (sender_id)
     REFERENCES users (user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

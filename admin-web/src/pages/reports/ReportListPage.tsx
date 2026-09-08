@@ -20,8 +20,9 @@ import DataTable from '../../components/DataTable';
 import type { Column } from '../../components/DataTable';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import ReportThreadDialog from './ReportThreadDialog';
 import adminService from '../../services/adminService';
-import { errorMessage } from '../../services/apiClient';
+import { errorMessage, imageUrl } from '../../services/apiClient';
 import { formatDateTime } from '../../utils/format';
 import Icon from '../../components/Icon';
 
@@ -48,6 +49,18 @@ const TARGET_LABEL: Record<ReportTargetType, string> = {
   reservation: 'การจอง',
 };
 
+/**
+ * คะแนนที่จะถูกหักเมื่อผู้ดูแลยืนยันว่าร้านผิดจริง
+ * ตัวเลขจริงกำหนดที่ backend (RULES.CONFIRMED_REPORT) ที่นี่ใช้แค่แสดงให้ผู้ดูแลอ่าน
+ */
+const PENALTY = -8;
+
+/**
+ * เรื่องแบบไหนที่ตัดคะแนนร้านได้
+ * รีวิวเป็นของลูกค้า และการแจ้งผู้ใช้ก็ไม่เกี่ยวกับร้าน จึงตัดคะแนนร้านไม่ได้
+ */
+const PENALIZABLE_TARGETS: ReadonlyArray<Report['target_type']> = ['store', 'post', 'reservation'];
+
 /** สิ่งที่กำลังจะเปลี่ยน เก็บไว้ระหว่างรอผู้ใช้ยืนยันใน dialog */
 interface PendingChange {
   report: Report;
@@ -61,6 +74,8 @@ export default function ReportListPage(): JSX.Element {
   const [error, setError] = useState('');
   const [pending, setPending] = useState<PendingChange | null>(null);
   const [processing, setProcessing] = useState(false);
+  /** เรื่องที่กำลังเปิดดูรายละเอียดและห้องคุยอยู่ (null = ไม่ได้เปิด) */
+  const [viewing, setViewing] = useState<Report | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -83,8 +98,9 @@ export default function ReportListPage(): JSX.Element {
    * @param note     บันทึกภายใน เห็นเฉพาะผู้ดูแล
    * @param message  ข้อความถึงเจ้าของสิ่งที่ถูกแจ้ง Backend จะยิงแจ้งเตือนให้
    *                 (ส่งไปก็ต่อเมื่อปิดเรื่องแบบ "จัดการแล้ว" เท่านั้น)
+   * @param penalize ตัดคะแนนความประพฤติของร้านด้วยหรือไม่
    */
-  async function applyChange(note: string, message: string): Promise<void> {
+  async function applyChange(note: string, message: string, penalize: boolean): Promise<void> {
     if (pending === null) return;
     setProcessing(true);
     try {
@@ -92,7 +108,8 @@ export default function ReportListPage(): JSX.Element {
         pending.report.report_id,
         pending.next,
         note.trim() === '' ? undefined : note,
-        message.trim() === '' ? undefined : message
+        message.trim() === '' ? undefined : message,
+        penalize
       );
       setPending(null);
       await load();
@@ -102,6 +119,10 @@ export default function ReportListPage(): JSX.Element {
       setProcessing(false);
     }
   }
+
+  /** เรื่องที่ค้างอยู่ใน dialog ตัดคะแนนร้านได้หรือไม่ */
+  const canPenalize =
+    pending !== null && PENALIZABLE_TARGETS.includes(pending.report.target_type);
 
   const columns: Array<Column<Report>> = [
     {
@@ -132,6 +153,15 @@ export default function ReportListPage(): JSX.Element {
       render: (row) => (
         <div>
           <div>{row.reason}</div>
+
+          {/* บอกให้เห็นตั้งแต่หน้ารายการว่าเรื่องไหนมีหลักฐานหรือมีคนคุยอยู่ */}
+          <div className="row text-small text-muted mt-xs" style={{ gap: 10 }}>
+            {imageUrl(row.image_url, 'report') !== null ? <span>มีรูปหลักฐาน</span> : null}
+            {(row.message_count ?? 0) > 0 ? (
+              <span>ข้อความ {row.message_count} รายการ</span>
+            ) : null}
+          </div>
+
           {row.admin_note !== null ? (
             <div className="text-small text-muted mt-md">บันทึกภายใน : {row.admin_note}</div>
           ) : null}
@@ -159,13 +189,29 @@ export default function ReportListPage(): JSX.Element {
       title: 'การจัดการ',
       width: '210px',
       render: (row) => {
-        // เรื่องที่ปิดไปแล้วไม่ต้องมีปุ่ม
+        /*
+         * ปุ่มดูรายละเอียดต้องมีทุกสถานะ รวมถึงเรื่องที่ปิดไปแล้ว
+         * เพราะรูปหลักฐานและบทสนทนาคือหลักฐานว่าตัดสินใจเพราะอะไร
+         * ถ้าเปิดดูย้อนหลังไม่ได้ การปิดเรื่องจะกลายเป็นกล่องดำที่ตรวจสอบไม่ได้
+         */
+        const detailButton = (
+          <button className="btn btn-ghost btn-sm" onClick={() => setViewing(row)}>
+            ดู / คุย
+          </button>
+        );
+
         if (row.status === 'resolved' || row.status === 'rejected') {
-          return <span className="text-small text-muted">ปิดเรื่องแล้ว</span>;
+          return (
+            <div className="row" style={{ flexWrap: 'wrap' }}>
+              <span className="text-small text-muted">ปิดเรื่องแล้ว</span>
+              {detailButton}
+            </div>
+          );
         }
 
         return (
           <div className="row" style={{ flexWrap: 'wrap' }}>
+            {detailButton}
             {row.status === 'open' ? (
               <button
                 className="btn btn-outline btn-sm"
@@ -262,10 +308,20 @@ export default function ReportListPage(): JSX.Element {
         extraPlaceholder="เช่น ได้รับรายงานเรื่องคุณภาพอาหาร กรุณาตรวจสอบก่อนลงขายครั้งต่อไป"
         extraHint="ข้อความนี้จะถูกส่งเป็นการแจ้งเตือนถึงเจ้าของโดยตรง ห้ามระบุชื่อผู้แจ้ง"
         loading={processing}
-        onConfirm={(note, message) => {
-          void applyChange(note, message);
+        showCheckbox={pending?.next === 'resolved' && canPenalize}
+        checkboxLabel={`ตัดคะแนนความประพฤติของร้าน ${String(PENALTY)} คะแนน`}
+        checkboxHint="ติ๊กเมื่อตรวจแล้วพบว่าร้านผิดจริง ถ้าคะแนนตกต่ำกว่าเกณฑ์ ระบบจะระงับร้านให้อัตโนมัติ"
+        onConfirm={(note, message, penalize) => {
+          void applyChange(note, message, penalize);
         }}
         onCancel={() => setPending(null)}
+      />
+
+      <ReportThreadDialog
+        report={viewing}
+        onClose={() => setViewing(null)}
+        // ส่งข้อความแล้วโหลดรายการใหม่ ตัวเลขจำนวนข้อความจะได้ตรงกับความจริง
+        onSent={() => { void load(); }}
       />
     </>
   );

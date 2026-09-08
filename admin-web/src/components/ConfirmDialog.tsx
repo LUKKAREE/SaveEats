@@ -30,12 +30,25 @@ interface ConfirmDialogProps {
   extraLabel?: string;
   extraPlaceholder?: string;
   extraHint?: string;
+  /**
+   * เปิดช่องติ๊กเลือก (ไม่บังคับ)
+   *
+   * *** มีไว้ทำอะไร ***
+   * บางการกระทำมี "ผลข้างเคียง" ที่ผู้ดูแลต้องเลือกเองว่าจะให้เกิดหรือไม่
+   * เช่น ปิดเรื่องร้องเรียนแล้วจะตัดคะแนนร้านด้วยหรือเปล่า
+   * แยกเป็นช่องติ๊กชัด ๆ ดีกว่าซ่อนไว้ในเงื่อนไขที่ผู้ดูแลมองไม่เห็น
+   */
+  showCheckbox?: boolean;
+  checkboxLabel?: string;
+  checkboxHint?: string;
+  checkboxDefault?: boolean;
   loading?: boolean;
   /**
    * reason จะเป็นข้อความว่างถ้าไม่ได้เปิด requireReason
    * extra จะเป็นข้อความว่างถ้าไม่ได้เปิด showExtra
+   * checked จะเป็น false เสมอถ้าไม่ได้เปิด showCheckbox
    */
-  onConfirm: (reason: string, extra: string) => void;
+  onConfirm: (reason: string, extra: string, checked: boolean) => void;
   onCancel: () => void;
 }
 
@@ -53,21 +66,27 @@ export default function ConfirmDialog({
   extraLabel = '',
   extraPlaceholder = '',
   extraHint = '',
+  showCheckbox = false,
+  checkboxLabel = '',
+  checkboxHint = '',
+  checkboxDefault = false,
   loading = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): JSX.Element | null {
   const [reason, setReason] = useState('');
   const [extra, setExtra] = useState('');
+  const [checked, setChecked] = useState(checkboxDefault);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
       setReason('');
       setExtra('');
+      setChecked(checkboxDefault);
       setError('');
     }
-  }, [open]);
+  }, [open, checkboxDefault]);
 
   if (!open) return null;
 
@@ -76,7 +95,7 @@ export default function ConfirmDialog({
       setError('กรุณากรอกเหตุผล');
       return;
     }
-    onConfirm(reason.trim(), extra.trim());
+    onConfirm(reason.trim(), extra.trim(), showCheckbox && checked);
   }
 
   return (
@@ -113,6 +132,20 @@ export default function ConfirmDialog({
           </div>
         ) : null}
 
+        {showCheckbox ? (
+          <div className="mt-md">
+            <label style={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => setChecked(e.target.checked)}
+              />
+              <span>{checkboxLabel}</span>
+            </label>
+            {checkboxHint ? <div className="text-small text-muted mt-xs">{checkboxHint}</div> : null}
+          </div>
+        ) : null}
+
         <div style={styles.actions}>
           <button className="btn btn-ghost" onClick={onCancel} disabled={loading}>
             {cancelLabel}
@@ -146,5 +179,6 @@ const styles: Record<string, CSSProperties> = {
   },
   title: { fontSize: 18, fontWeight: 600, marginBottom: 8 },
   message: { color: 'var(--color-text-secondary)', fontSize: 14 },
+  checkboxRow: { display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 },
 };

@@ -55,7 +55,7 @@ export const API_URL = `${BASE_URL}/api`;
 export const API_TIMEOUT = 15000;
 
 /** โฟลเดอร์รูปที่ backend เก็บไว้ */
-export type ImageFolder = 'food' | 'store' | 'profile';
+export type ImageFolder = 'food' | 'store' | 'profile' | 'report';
 
 /**
  * แปลงชื่อไฟล์รูปในฐานข้อมูล ให้เป็น URL เต็มที่แอปโหลดได้
@@ -119,6 +119,7 @@ export const ENDPOINTS = {
   // แจ้งปัญหา
   REPORTS: '/reports',
   MY_REPORTS: '/reports/my',
+  REPORT_MESSAGES: (reportId: number): string => `/reports/${reportId}/messages`,
 
   // แจ้งเตือน
   NOTIFICATIONS: '/notifications',

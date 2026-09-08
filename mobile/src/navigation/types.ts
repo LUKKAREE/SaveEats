@@ -41,6 +41,19 @@ export interface ReportParams {
 }
 
 /**
+ * parameter ของหน้ารายละเอียดเรื่องที่แจ้ง
+ * ใช้ร่วมกันทั้งสอง stack เพราะทั้งลูกค้าและร้านแจ้งปัญหาได้
+ *
+ * *** ส่งมาแค่ report_id ***
+ * ต่างจากหน้าอื่นที่ส่งข้อมูลมาทั้งก้อน เพราะหน้านี้ต้องยิงไปเอาบทสนทนาอยู่แล้ว
+ * และสถานะของเรื่องเปลี่ยนได้ตลอดเวลาที่ผู้ดูแลกำลังตรวจ
+ * ถ้าส่งข้อมูลเก่ามาแสดง ผู้ใช้จะเห็นสถานะที่ไม่ตรงกับความจริง
+ */
+export interface ReportDetailParams {
+  reportId: number;
+}
+
+/**
  * parameter ของหน้าดูตำแหน่งร้านบนแผนที่
  * ใช้ร่วมกันทั้งสอง stack เพราะหน้ารายละเอียดการจองเปิดได้ทั้งลูกค้าและร้าน
  *
@@ -104,6 +117,7 @@ export type CustomerStackParamList = {
   MyReviews: undefined;
   /** เรื่องที่เคยแจ้งปัญหาไว้ พร้อมสถานะล่าสุด (เข้าจากแท็บ "ฉัน") */
   MyReports: undefined;
+  ReportDetail: ReportDetailParams;
   Notifications: undefined;
   EditProfile: undefined;
   Report: ReportParams;
@@ -155,6 +169,7 @@ export type SellerStackParamList = {
   ReservationDetail: { reservationId: number };
   /** ร้านก็แจ้งปัญหาได้ จึงต้องดูประวัติของตัวเองได้เหมือนกัน */
   MyReports: undefined;
+  ReportDetail: ReportDetailParams;
   Notifications: undefined;
   /** ร้านก็แก้ชื่อ/เบอร์/รูปโปรไฟล์ของตัวเองได้ ใช้หน้าจอเดียวกับฝั่งลูกค้า */
   EditProfile: undefined;

@@ -11,6 +11,7 @@ import authMiddleware from '../middleware/authMiddleware';
 import { requireAdmin } from '../middleware/roleMiddleware';
 import adminController from '../controllers/adminController';
 import { rejectStoreRules } from '../validators/storeValidator';
+import { reportMessageRules } from '../validators/reportValidator';
 
 const router = Router();
 
@@ -39,6 +40,12 @@ router.delete('/reviews/:id', asyncHandler(adminController.deleteReview));
 // การแจ้งปัญหา
 router.get('/reports', asyncHandler(adminController.listReports));
 router.put('/reports/:id', asyncHandler(adminController.updateReport));
+router.get('/reports/:id/messages', asyncHandler(adminController.listReportMessages));
+router.post(
+  '/reports/:id/messages',
+  reportMessageRules, validate,
+  asyncHandler(adminController.addReportMessage)
+);
 
 // คะแนนความประพฤติ
 router.get('/behavior', asyncHandler(adminController.listBehavior));

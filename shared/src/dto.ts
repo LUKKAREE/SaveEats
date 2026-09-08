@@ -202,6 +202,14 @@ export interface CreateReportRequest {
   reason: string;
 }
 
+/**
+ * ส่งข้อความเข้าไปในเรื่องที่แจ้ง
+ * ใช้ได้ทั้งฝั่งผู้แจ้งและฝั่งผู้ดูแล ต่างกันแค่ endpoint ที่ยิงไป
+ */
+export interface CreateReportMessageRequest {
+  message: string;
+}
+
 export interface UpdateReportRequest {
   status: ReportStatus;
   /** บันทึกภายใน เห็นเฉพาะผู้ดูแล */
@@ -211,6 +219,17 @@ export interface UpdateReportRequest {
    * ส่งมาเฉพาะตอนปิดเรื่องแบบ resolved เท่านั้น ถึงจะมีการแจ้งเตือนออกไป
    */
   resolutionMessage?: string;
+  /**
+   * ตัดคะแนนความประพฤติของร้านด้วยหรือไม่
+   *
+   * *** ทำไมต้องให้ผู้ดูแลติ๊กเอง ไม่หักอัตโนมัติทุกครั้ง ***
+   * เรื่องที่ปิดแบบ resolved ไม่ได้แปลว่าร้านผิดเสมอไป
+   * บางเรื่องปิดเพราะคุยกันจบแล้ว หรือเป็นความเข้าใจผิดของทั้งสองฝ่าย
+   * ถ้าหักอัตโนมัติ ร้านที่ไม่ได้ทำอะไรผิดจะโดนตัดคะแนนไปด้วย
+   *
+   * ใช้ได้เฉพาะเรื่องที่ผูกกับร้าน (store / post / reservation) เท่านั้น
+   */
+  penalizeStore?: boolean;
 }
 
 // ---------------------------------------------------------------- Admin

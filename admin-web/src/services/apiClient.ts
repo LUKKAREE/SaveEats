@@ -112,7 +112,10 @@ export async function apiDelete<T>(url: string, config?: AxiosRequestConfig): Pr
 }
 
 /** แปลงชื่อไฟล์รูปเป็น URL เต็ม */
-export function imageUrl(filename: string | null, folder: 'food' | 'store' | 'profile' = 'food'): string | null {
+export function imageUrl(
+  filename: string | null | undefined,
+  folder: 'food' | 'store' | 'profile' | 'report' = 'food'
+): string | null {
   if (!filename) return null;
   if (filename.startsWith('http')) return filename;
   return `${BASE_URL}/uploads/${folder}/${filename}`;

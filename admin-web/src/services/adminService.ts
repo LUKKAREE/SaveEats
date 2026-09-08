@@ -8,9 +8,10 @@
 import type {
   ApiResponse, PaginatedResponse,
   DashboardStats, StoreForAdmin, Store, User, FeedItem,
-  ReservationDetail, Review, Report, BehaviorScoreForAdmin, BehaviorScore,
+  ReservationDetail, Review, Report, ReportMessage, BehaviorScoreForAdmin, BehaviorScore,
   StoreStatus, ReportStatus, ReservationStatus,
   RejectStoreRequest, SetUserActiveRequest, AdjustBehaviorRequest, UpdateReportRequest,
+  CreateReportMessageRequest,
 } from '@shared/index';
 import { apiGet, apiPost, apiPut, apiDelete } from './apiClient';
 
@@ -99,12 +100,31 @@ export const adminService = {
     reportId: number,
     status: ReportStatus,
     adminNote?: string,
-    resolutionMessage?: string
+    resolutionMessage?: string,
+    /** ตัดคะแนนความประพฤติของร้านด้วยหรือไม่ (มีผลเฉพาะตอนปิดเรื่องแบบ resolved) */
+    penalizeStore?: boolean
   ): Promise<ApiResponse<Report>> {
     const body: UpdateReportRequest = { status };
     if (adminNote !== undefined) body.adminNote = adminNote;
     if (resolutionMessage !== undefined) body.resolutionMessage = resolutionMessage;
+    if (penalizeStore === true) body.penalizeStore = true;
     return apiPut<ApiResponse<Report>>(`/admin/reports/${reportId}`, body);
+  },
+
+  /** บทสนทนาระหว่างผู้ดูแลกับผู้แจ้ง ในเรื่องหนึ่ง */
+  async getReportMessages(reportId: number): Promise<ReportMessage[]> {
+    const res = await apiGet<ApiResponse<ReportMessage[]>>(`/admin/reports/${reportId}/messages`);
+    return res.data;
+  },
+
+  /** ผู้ดูแลตอบกลับผู้แจ้ง (ผู้ถูกแจ้งไม่เห็นข้อความนี้) */
+  async addReportMessage(reportId: number, message: string): Promise<ReportMessage> {
+    const body: CreateReportMessageRequest = { message };
+    const res = await apiPost<ApiResponse<ReportMessage>>(
+      `/admin/reports/${reportId}/messages`,
+      body
+    );
+    return res.data;
   },
 
   // ---------- คะแนนความประพฤติ ----------

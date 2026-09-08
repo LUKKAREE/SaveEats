@@ -8,7 +8,7 @@
  *   - KeyboardAvoidingView กันคีย์บอร์ดบังช่องกรอก
  */
 import { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import ScreenContainer from '../../../components/ScreenContainer';
@@ -67,7 +67,12 @@ export default function LoginScreen({ navigation }: AuthScreenProps<'Login'>): J
         {/* ---- ส่วนหัวแบรนด์ ---- */}
         <View style={styles.header}>
           <View style={styles.logoCircle}>
-            <Ionicons name="leaf" size={40} color={theme.colors.textOnPrimary} />
+            {/* ใช้โลโก้ตัวเดียวกับไอคอนแอป เพื่อให้หน้าตาแบรนด์ตรงกันทุกที่ */}
+            <Image
+              source={require('../../../../assets/images/logo-mark-white.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.appName}>{APP_NAME}</Text>
           <Text style={styles.tagline}>{APP_TAGLINE}</Text>
@@ -143,6 +148,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     ...theme.shadows.card,
   },
+  logoImage: { width: 44, height: 44 },
   appName: { ...theme.textStyles.title, color: theme.colors.primaryDark },
   tagline: { ...theme.textStyles.bodyMuted, marginTop: theme.spacing.xxs },
 

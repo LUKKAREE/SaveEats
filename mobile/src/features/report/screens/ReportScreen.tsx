@@ -2,8 +2,9 @@
  * แจ้งปัญหาให้ผู้ดูแลระบบ (ใช้ได้จริงแล้ว)
  *
  * เข้ามาได้จาก
- *   - หน้ารายละเอียดร้าน      -> แจ้งปัญหาร้าน
- *   - หน้ารายละเอียดการจอง    -> แจ้งปัญหาการจอง
+ *   - หน้ารายละเอียดร้าน       -> ลูกค้าแจ้งปัญหาร้าน
+ *   - หน้ารายละเอียดการจอง     -> แจ้งได้ทั้งลูกค้าและร้าน
+ *   - หน้ารีวิวและคะแนนของร้าน -> ร้านแจ้งรีวิวที่ไม่เป็นธรรม
  *
  * *** ทำไมต้องมีหัวข้อสำเร็จรูปให้เลือก ***
  * ถ้าให้พิมพ์เองอย่างเดียว คนส่วนใหญ่จะพิมพ์สั้น ๆ ว่า "ไม่ดี" แล้วส่ง
@@ -20,9 +21,12 @@ import type { ReportTargetType } from '@shared/index';
 import ScreenContainer from '../../../components/ScreenContainer';
 import AppButton from '../../../components/AppButton';
 import FormSection from '../../../components/FormSection';
+import ImagePickerField from '../../../components/ImagePickerField';
 
 import reportService from '../reportService';
+import { useAuth } from '../../../context/AuthContext';
 import { errorMessage } from '../../../core/services/apiClient';
+import type { PickedImage } from '../../../core/services/apiClient';
 import { theme } from '../../../core/theme/theme';
 import type { CustomerScreenProps } from '../../../navigation/types';
 
@@ -69,6 +73,26 @@ const PRESETS: Record<ReportTargetType, string[]> = {
   ],
 };
 
+/**
+ * หัวข้อสำเร็จรูปเวอร์ชันฝั่งร้าน
+ *
+ * *** ทำไมต้องมีอีกชุด ***
+ * หน้านี้ใช้ร่วมกันทั้งลูกค้าและร้าน แต่ "การจอง" หนึ่งใบมีสองมุมเสมอ
+ * ลูกค้าเจอปัญหาแบบ "ไปถึงแล้วไม่ได้ของ" ส่วนร้านเจอแบบ "ลูกค้าไม่มารับ"
+ * ถ้าใช้ชุดเดียวกัน ร้านจะเห็นหัวข้อที่กล่าวหาตัวเองอยู่เต็มไปหมด
+ * แล้วสุดท้ายก็ต้องพิมพ์เองอยู่ดี หัวข้อสำเร็จรูปจึงไม่ได้ช่วยอะไรเลย
+ *
+ * ประเภทไหนไม่ได้ระบุไว้ที่นี่ ให้ใช้ชุดเดียวกับฝั่งลูกค้า
+ */
+const SELLER_PRESETS: Partial<Record<ReportTargetType, string[]>> = {
+  reservation: [
+    'ลูกค้าจองแล้วไม่มารับตามเวลา',
+    'ลูกค้ามารับช้ากว่าเวลาที่กำหนดมาก',
+    'ลูกค้าใช้ถ้อยคำไม่เหมาะสมกับพนักงาน',
+    'สงสัยว่าเป็นการจองปลอมหรือกลั่นแกล้ง',
+  ],
+};
+
 /** หัวเรื่องที่แสดงบนหน้าจอ ตามประเภทที่แจ้ง */
 const TITLE: Record<ReportTargetType, string> = {
   store: 'แจ้งปัญหาเกี่ยวกับร้าน',
@@ -80,12 +104,15 @@ const TITLE: Record<ReportTargetType, string> = {
 
 export default function ReportScreen({ route, navigation }: Props): JSX.Element {
   const { targetType, targetId, targetName } = route.params;
+  const { isSeller } = useAuth();
 
   const [reason, setReason] = useState('');
+  const [image, setImage] = useState<PickedImage | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const presets = PRESETS[targetType];
+  // ร้านเห็นหัวข้อชุดของร้าน ถ้าประเภทนั้นไม่ได้ทำชุดแยกไว้ ก็ใช้ชุดกลางเหมือนลูกค้า
+  const presets = (isSeller ? SELLER_PRESETS[targetType] : undefined) ?? PRESETS[targetType];
   const trimmed = reason.trim();
   const tooShort = trimmed.length > 0 && trimmed.length < MIN_REASON;
 
@@ -104,7 +131,7 @@ export default function ReportScreen({ route, navigation }: Props): JSX.Element 
     setSaving(true);
     setError(null);
     try {
-      await reportService.create({ targetType, targetId, reason: trimmed });
+      await reportService.create({ targetType, targetId, reason: trimmed }, image);
 
       Alert.alert(
         'ส่งเรื่องแล้ว',
@@ -188,6 +215,29 @@ export default function ReportScreen({ route, navigation }: Props): JSX.Element 
           </View>
         </FormSection>
 
+        {/* ---- รูปหลักฐาน ---- */}
+        <FormSection
+          title="รูปหลักฐาน"
+          hint="ไม่บังคับ แต่ช่วยให้ผู้ดูแลตัดสินได้เร็วขึ้นมาก โดยเฉพาะเรื่องสภาพอาหาร"
+        >
+          <ImagePickerField
+            label=""
+            value={image}
+            onChange={setImage}
+            hint="แตะเพื่อถ่ายรูปใหม่ หรือเลือกจากคลังภาพ"
+          />
+          {image !== null ? (
+            <TouchableOpacity
+              style={styles.removeImage}
+              onPress={() => setImage(null)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle-outline" size={16} color={theme.colors.error} />
+              <Text style={styles.removeImageText}>เอารูปออก</Text>
+            </TouchableOpacity>
+          ) : null}
+        </FormSection>
+
         {error !== null ? (
           <View style={styles.errorBox}>
             <Ionicons name="alert-circle-outline" size={18} color={theme.colors.error} />
@@ -268,6 +318,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   counter: { ...theme.textStyles.caption },
+
+  removeImage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 4,
+    marginTop: theme.spacing.xs,
+  },
+  removeImageText: { ...theme.textStyles.caption, color: theme.colors.error },
   counterWarn: { ...theme.textStyles.caption, color: theme.colors.warningText },
 
   errorBox: {

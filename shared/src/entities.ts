@@ -244,6 +244,12 @@ export interface Report {
   target_type: ReportTargetType;
   target_id: number;
   reason: string;
+  /**
+   * รูปหลักฐานที่ผู้แจ้งแนบมา (ไม่บังคับ)
+   * เก็บ "ชื่อไฟล์" ตอนรันในเครื่อง และ "URL เต็ม" ตอนใช้ Cloudinary
+   * ฝั่งแอปให้ส่งผ่าน imageUrl() เสมอ ฟังก์ชันนั้นแยกสองแบบให้เอง
+   */
+  image_url: string | null;
   status: ReportStatus;
   /**
    * บันทึกภายในของผู้ดูแล
@@ -259,4 +265,35 @@ export interface Report {
   /** มาจากการ JOIN ตาราง users */
   reporter_name?: string;
   reporter_email?: string;
+  /**
+   * ชื่อของสิ่งที่ถูกแจ้ง เช่น ชื่อร้าน หรือ ชื่ออาหาร
+   *
+   * *** ไม่ได้อยู่ในตาราง reports ***
+   * target_id ชี้ไปได้ 5 ตาราง จึงผูก Foreign Key ไม่ได้และ JOIN ตรง ๆ ไม่ได้
+   * service จึงไปตามชื่อมาให้ทีหลัง เพื่อให้ผู้ใช้เห็นว่า "ร้านครัวคุณแม่"
+   * แทนที่จะเห็นว่า "ร้าน #7" ซึ่งไม่มีใครจำได้ว่าคือร้านไหน
+   *
+   * เป็น null เมื่อของนั้นถูกลบไปแล้ว
+   */
+  target_name?: string | null;
+  /** จำนวนข้อความในห้องสนทนาของเรื่องนี้ (ใส่มาเฉพาะบางเส้นทาง) */
+  message_count?: number;
+}
+
+/**
+ * ข้อความโต้ตอบภายในเรื่องที่แจ้ง
+ *
+ * คู่สนทนามีแค่ผู้แจ้งกับผู้ดูแล ผู้ถูกแจ้งไม่อยู่ในห้องนี้
+ * เพราะระบบออกแบบให้ผู้ถูกแจ้งไม่รู้ว่าใครเป็นคนแจ้ง
+ */
+export interface ReportMessage {
+  message_id: number;
+  report_id: number;
+  sender_id: number;
+  /** บทบาทของคนพิมพ์ ณ ตอนที่พิมพ์ ใช้เลือกฝั่งซ้าย/ขวาของฟองข้อความ */
+  sender_role: 'reporter' | 'admin';
+  message: string;
+  created_at: string;
+  /** มาจากการ JOIN ตาราง users */
+  sender_name?: string;
 }

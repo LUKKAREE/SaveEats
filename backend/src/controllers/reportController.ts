@@ -10,11 +10,13 @@
  * ส่วนของ Admin (ดูรายการ / เปลี่ยนสถานะ) อยู่ที่ adminController
  */
 import type { Request, Response } from 'express';
-import type { CreateReportRequest } from '@shared/index';
+import type { CreateReportMessageRequest, CreateReportRequest } from '@shared/index';
 
 import reportService from '../services/reportService';
 import { ok, created } from '../utils/response';
 import { requireAuth } from '../utils/auth';
+import { uploadedFilename } from '../middleware/uploadMiddleware';
+import { paramId } from '../utils/query';
 
 export const reportController = {
   /**
@@ -27,11 +29,20 @@ export const reportController = {
     const user = requireAuth(req);
     const body = req.body as CreateReportRequest;
 
-    const report = await reportService.create(user.userId, {
-      targetType: body.targetType,
-      targetId: Number(body.targetId),
-      reason: body.reason,
-    });
+    /*
+     * รูปหลักฐานไม่บังคับ
+     * uploadedFilename() คืน undefined เมื่อผู้ใช้ไม่ได้แนบรูปมา
+     * แปลงเป็น null ก่อนส่งต่อ เพราะฐานข้อมูลเก็บ null ไม่ใช่ undefined
+     */
+    const report = await reportService.create(
+      user.userId,
+      {
+        targetType: body.targetType,
+        targetId: Number(body.targetId),
+        reason: body.reason,
+      },
+      uploadedFilename(req) ?? null
+    );
 
     created(res, report, 'ส่งเรื่องให้ผู้ดูแลระบบแล้ว ขอบคุณที่ช่วยแจ้ง');
   },
@@ -40,6 +51,21 @@ export const reportController = {
   async listMine(req: Request, res: Response): Promise<void> {
     const user = requireAuth(req);
     ok(res, await reportService.listMine(user.userId));
+  },
+
+  /** GET /api/reports/:id/messages - บทสนทนาระหว่างผู้แจ้งกับผู้ดูแล */
+  async listMessages(req: Request, res: Response): Promise<void> {
+    const user = requireAuth(req);
+    ok(res, await reportService.listMyMessages(user.userId, paramId(req)));
+  },
+
+  /** POST /api/reports/:id/messages - ผู้แจ้งส่งข้อมูลเพิ่ม */
+  async addMessage(req: Request, res: Response): Promise<void> {
+    const user = requireAuth(req);
+    const body = req.body as CreateReportMessageRequest;
+
+    const saved = await reportService.addMyMessage(user.userId, paramId(req), body.message);
+    created(res, saved, 'ส่งข้อความแล้ว');
   },
 };
 

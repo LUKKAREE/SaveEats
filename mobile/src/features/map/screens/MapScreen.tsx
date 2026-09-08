@@ -1,10 +1,8 @@
 /**
  * แผนที่ร้านใกล้เคียง
  *
- * *** ต้องมี Google Maps API Key ก่อนถึงจะเห็นแผนที่บน Android ***
- * ใส่ที่ mobile/app.json ตรง android.config.googleMaps.apiKey
- * ถ้ายังไม่ใส่ แผนที่จะเป็นจอเทา ๆ แต่แอปไม่พัง และหน้านี้จะขึ้นคำเตือนบอกวิธีแก้
- * (บน iOS ใช้ Apple Maps จึงไม่ต้องใช้ key)
+ * แผนที่ใช้ OpenStreetMap ผ่านคอมโพเนนต์ OsmMap (ดูเหตุผลที่ไฟล์นั้น)
+ * ไม่ต้องใช้ API Key ไม่ต้องผูกบัตร ใครดึงโค้ดไป build ก็ใช้ได้ทันที
  *
  * ลำดับการทำงาน
  *   1. ขออนุญาตเข้าถึงตำแหน่ง
@@ -31,7 +29,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, Platform,
+  View, Text, FlatList, TouchableOpacity, StyleSheet,
   useWindowDimensions, Animated, PanResponder, Image, ScrollView,
 } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
@@ -390,16 +388,6 @@ export default function MapScreen(): JSX.Element {
             );
           })}
         </ScrollView>
-
-        {/* แจ้งเรื่อง Google Maps Key เฉพาะ Android */}
-        {Platform.OS === 'android' ? (
-          <View style={styles.noticeChip}>
-            <Ionicons name="information-circle-outline" size={13} color={theme.colors.textSecondary} />
-            <Text style={styles.noticeText} numberOfLines={1}>
-              แผนที่เป็นจอเทา = ยังไม่ได้ใส่ Google Maps API Key
-            </Text>
-          </View>
-        ) : null}
       </View>
 
       {/* ---- แผ่นรายการร้าน (ลากขึ้น-ลงได้) ---- */}
@@ -603,19 +591,6 @@ const styles = StyleSheet.create({
   },
   radiusText: { ...theme.textStyles.caption, color: theme.colors.textSecondary },
   radiusTextActive: { color: theme.colors.textOnPrimary },
-
-  noticeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    maxWidth: '92%',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surface,
-    opacity: 0.92,
-  },
-  noticeText: { ...theme.textStyles.caption, flexShrink: 1 },
 
   // ---- แผ่นรายการร้าน ----
   sheet: {

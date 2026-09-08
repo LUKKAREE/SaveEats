@@ -48,12 +48,14 @@ import {
   isValidElement,
 } from 'react';
 import type { ReactNode } from 'react';
+
 import { View, StyleSheet } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { WebViewMessageEvent } from 'react-native-webview';
 
 import { theme } from '../core/theme/theme';
+import { PIN_NORMAL, PIN_ACTIVE } from './mapPinAsset';
 
 /* ------------------------------------------------------------------ */
 /*  ชนิดข้อมูล (ตั้งชื่อให้ตรงกับ react-native-maps เดิม)              */
@@ -181,10 +183,6 @@ const MAP_HTML = `<!DOCTYPE html>
 <style>
   html, body, #map { margin:0; padding:0; height:100%; width:100%; background:#e8eef3; }
   .leaflet-container { background:#e8eef3; font-family: sans-serif; }
-  .pin { width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
-         border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.4); }
-  .pin i { display:block; width:8px; height:8px; margin:7px 0 0 7px; background:#fff;
-           border-radius:50%; }
   .dot { width:16px; height:16px; border-radius:8px; background:#1a73e8;
          border:3px solid #fff; box-shadow:0 0 0 4px rgba(26,115,232,.25); }
 </style>
@@ -211,13 +209,20 @@ const MAP_HTML = `<!DOCTYPE html>
     }
   }
 
-  function pinIcon(color, big) {
-    var size = big ? 32 : 26;
-    return L.divIcon({
-      className: '',
-      html: '<div class="pin" style="background:' + color + ';width:' + size + 'px;height:' + size + 'px"><i></i></div>',
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size]
+  /*
+   * หมุดร้าน - ใช้รูป map-pin-store ของโปรเจคเอง ที่ฝังมาเป็น data URI
+   * ไฟล์ต้นฉบับกว้าง 89 สูง 108 จึงคำนวณความสูงจากความกว้างตามอัตราส่วนเดิม
+   * iconAnchor ชี้ที่ "ปลายแหลมล่างสุด" ปลายหมุดจะได้จิ้มตรงพิกัดจริง
+   */
+  var PIN_IMG = { normal: '${PIN_NORMAL}', active: '${PIN_ACTIVE}' };
+
+  function pinIcon(selected) {
+    var w = selected ? 34 : 28;
+    var h = Math.round(w * 108 / 89);
+    return L.icon({
+      iconUrl: selected ? PIN_IMG.active : PIN_IMG.normal,
+      iconSize: [w, h],
+      iconAnchor: [w / 2, h]
     });
   }
 
@@ -253,7 +258,7 @@ const MAP_HTML = `<!DOCTYPE html>
     markerLayer.clearLayers();
     (state.markers || []).forEach(function (m) {
       var mk = L.marker([m.lat, m.lng], {
-        icon: pinIcon(m.selected ? '#15803d' : '#22c55e', m.selected),
+        icon: pinIcon(m.selected === true),
         zIndexOffset: m.selected ? 1000 : 0,
         title: m.title || ''
       });
