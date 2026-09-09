@@ -226,7 +226,24 @@ export default function SellerPostListScreen(): JSX.Element {
         renderItem={({ item }) => {
           const uri = imageUrl(item.image, 'food');
           const badge = STATUS_STYLE[item.status] ?? STATUS_STYLE['active'];
-          const sold = item.quantity_total - item.quantity_left;
+          /*
+           * *** ตัวเลขนี้คือ "ถูกจองอยู่" ไม่ใช่ "ขายไปแล้ว" ***
+           *
+           * เดิมข้อความบนการ์ดเขียนว่า "ขายไปแล้ว X จาก Y ชุด" ซึ่งบอกผิด
+           * เพราะพอคิวหมดเวลา ระบบคืนของกลับเข้า quantity_left (RQ-042)
+           * ตัวเลขที่คำนวณตรงนี้จึง "ลดลงได้" ซึ่งขัดกับคำว่าขายไปแล้ว
+           * ร้านที่เห็นเลขลดจะนึกว่าระบบนับผิดหรือข้อมูลหาย
+           *
+           * สิ่งที่ผลต่างนี้บอกได้จริงคือ ตอนนี้มีของถูกจับจองอยู่กี่ชุด
+           * ซึ่งลดลงได้เป็นเรื่องปกติเมื่อมีคนยกเลิกหรือคิวหมดเวลา
+           *
+           * *** ถ้าอยากได้ยอด "ขายได้จริง" ต่อโพสต์ ***
+           * ต้องนับจากการจองที่ status = 'completed' ซึ่งฝั่ง backend มี
+           * reservationModel.sumSaved(storeId) อยู่แล้ว แต่ยังไม่มี API
+           * ที่แยกรายโพสต์ ถ้าจะทำต้องเพิ่ม RQ ใหม่ใน RTM และ scenario ใน SIT ด้วย
+           * ไม่ใช่แอบใส่เพิ่มโดยไม่มีเอกสารรองรับ
+           */
+          const reserved = item.quantity_total - item.quantity_left;
           const finished = !isLive(item.status);
 
           return (
@@ -262,7 +279,7 @@ export default function SellerPostListScreen(): JSX.Element {
                   </Text>
 
                   <Text style={styles.meta}>
-                    ขายไปแล้ว {sold} จาก {item.quantity_total} ชุด  (เหลือ {item.quantity_left})
+                    ถูกจองอยู่ {reserved} จาก {item.quantity_total} ชุด  (เหลือ {item.quantity_left})
                   </Text>
                 </View>
               </View>

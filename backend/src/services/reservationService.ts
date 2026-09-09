@@ -287,6 +287,31 @@ export const reservationService = {
         reservation.customer_id, 'RESERVATION_CANCELLED', [reservation.food_name],
         { type: 'reservation', refId: reservationId }
       );
+    } else if (closed) {
+      /*
+       * ลูกค้า (หรือผู้ดูแลระบบ) เป็นคนยกเลิก -> ต้องบอกร้านด้วย (RQ-046)
+       *
+       * *** ทำไมร้านต้องรู้ ***
+       * ของถูกคืนเข้าโพสต์ไปแล้วตั้งแต่บรรทัดบน ถ้าร้านไม่รู้
+       * ร้านจะเห็นจำนวนคงเหลืองอกขึ้นมาเองโดยไม่มีคำอธิบาย
+       * และอาจพลาดโอกาสขายของชุดนั้นต่อในเวลาที่ยังเหลือ
+       *
+       * *** ทำไมไม่หักคะแนนความประพฤติ ***
+       * คะแนนความประพฤติเป็นของร้าน ร้านไม่ได้ทำอะไรผิดในกรณีนี้
+       *
+       * *** ทำไมต้องเช็ค closed ก่อน ***
+       * closed = false แปลว่างานเบื้องหลังชิงปิดแถวนี้เป็น expired ไปก่อนแล้ว
+       * การจองนั้นจึงไม่ได้ถูก "ยกเลิก" จริง การส่งข้อความนี้ออกไปจะเป็นการโกหกร้าน
+       */
+      const store = await storeModel.findById(reservation.store_id);
+      if (store) {
+        await notificationService.notifyFromTemplate(
+          store.user_id,
+          'RESERVATION_CANCELLED_FOR_STORE',
+          [reservation.food_name, isCustomer ? 'ลูกค้า' : 'ผู้ดูแลระบบ'],
+          { type: 'reservation', refId: reservationId }
+        );
+      }
     }
 
     const updated = await reservationModel.findById(reservationId);
@@ -323,6 +348,53 @@ export const reservationService = {
       });
     }
     return closedCount;
+  },
+
+  /**
+   * เตือนลูกค้าล่วงหน้าก่อนคิวจะหมดเวลา (RQ-045)
+   *
+   * *** ต่างจาก expireOverdue อย่างไร ***
+   * expireOverdue ทำงานกับคิวที่ "เลยเวลาไปแล้ว" คือปิดทิ้งและคืนของ
+   * ตัวนี้ทำงานกับคิวที่ "ยังไม่หมด แต่ใกล้หมด" คือแค่เตือน ไม่แตะสถานะการจอง
+   *
+   * *** ทำไมต้อง markReminderSent ก่อนส่งข้อความ ไม่ใช่หลังส่ง ***
+   * งานเบื้องหลังวิ่งทุก 5 นาที แต่หน้าต่างการเตือนกว้างกว่านั้น
+   * คิวหนึ่งใบจึงเข้าเงื่อนไขซ้ำได้หลายรอบ ถ้าไม่จองสิทธิ์ไว้ก่อน
+   * ลูกค้าจะโดนเตือนซ้ำทุก 5 นาทีจนกลายเป็นสแปม
+   *
+   * markReminderSent ยัดเงื่อนไข reminder_sent_at IS NULL ไว้ใน WHERE
+   * ให้ฐานข้อมูลตัดสินว่าใครได้สิทธิ์ส่ง วิธีเดียวกับ closeIfOpen ด้านบน
+   * ถ้าส่งข้อความไม่สำเร็จ ผลคือลูกค้าไม่ได้รับการเตือนรอบนั้น
+   * ซึ่งยอมรับได้มากกว่าการเตือนซ้ำ เพราะเดี๋ยวก็มีข้อความตอนหมดอายุตามมาอยู่ดี
+   *
+   * @param minutesBefore เตือนเมื่อเหลือเวลาน้อยกว่ากี่นาที
+   * @returns จำนวนคนที่ถูกเตือนจริงในรอบนี้
+   */
+  async remindExpiringSoon(minutesBefore: number): Promise<number> {
+    const rows = await reservationModel.findExpiringSoon(minutesBefore);
+    let sentCount = 0;
+
+    for (const r of rows) {
+      const claimed = await reservationModel.markReminderSent(r.reservation_id);
+      if (!claimed) continue; // มีรอบอื่นเตือนไปแล้ว
+      sentCount += 1;
+
+      /*
+       * เวลาที่เหลือจริง ณ วินาทีนี้ ไม่ใช่ค่า minutesBefore
+       * ปัดขึ้นอย่างน้อย 1 เพื่อไม่ให้ขึ้นว่า "เหลืออีก 0 นาที" ซึ่งอ่านแล้วสับสน
+       */
+      const minutesLeft = Math.max(
+        1,
+        Math.round((parseMysqlDate(r.expires_at).getTime() - Date.now()) / 60000)
+      );
+
+      await notificationService.notifyFromTemplate(
+        r.customer_id, 'RESERVATION_EXPIRING_SOON', [r.food_name, minutesLeft],
+        { type: 'reservation', refId: r.reservation_id }
+      );
+    }
+
+    return sentCount;
   },
 };
 

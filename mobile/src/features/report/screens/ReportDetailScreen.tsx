@@ -27,6 +27,7 @@ import type { Report, ReportMessage } from '@shared/index';
 import { REPORT_STATUS_LABEL } from '@shared/index';
 
 import ScreenContainer from '../../../components/ScreenContainer';
+import StickyFooter from '../../../components/StickyFooter';
 import LoadingView from '../../../components/LoadingView';
 import EmptyState from '../../../components/EmptyState';
 
@@ -224,16 +225,24 @@ export default function ReportDetailScreen({ route }: Props): JSX.Element {
           ) : null}
         </ScrollView>
 
-        {/* ---- ช่องพิมพ์ ---- */}
+        {/* ---- ช่องพิมพ์ ----
+            *** ต้องใช้ StickyFooter ห้ามใช้ View ธรรมดา ***
+            ScreenContainer กันขอบให้เฉพาะด้านบน (edges={['top']}) เท่านั้น
+            ของที่ตรึงอยู่ล่างจอจึงต้องเผื่อความสูงแถบปุ่มของระบบเอง
+            ไม่งั้นบนเครื่องที่ใช้ปุ่ม 3 ปุ่ม ช่องพิมพ์กับปุ่มส่งจะไปนอนทับ
+            ปุ่มย้อนกลับ/โฮมของเครื่อง กดส่งทีไรก็โดนปุ่มโฮมแทน
+
+            เดิมหน้านี้เขียน View เองจึงพลาดข้อนี้ไป หน้าอื่นที่มีแถบตรึงล่างจอ
+            (ตัวกรอง / รายละเอียดโพสต์ / ยืนยันการจอง) ใช้ StickyFooter อยู่แล้ว */}
         {closed ? (
-          <View style={styles.closedBar}>
+          <StickyFooter style={styles.closedBar}>
             <Ionicons name="lock-closed-outline" size={15} color={theme.colors.textMuted} />
             <Text style={styles.closedText}>
               เรื่องนี้ปิดแล้ว ถ้ายังมีปัญหาอยู่ กรุณาแจ้งเป็นเรื่องใหม่
             </Text>
-          </View>
+          </StickyFooter>
         ) : (
-          <View style={styles.inputBar}>
+          <StickyFooter style={styles.inputBar}>
             <TextInput
               style={styles.input}
               placeholder="พิมพ์ข้อมูลเพิ่มเติม..."
@@ -251,7 +260,7 @@ export default function ReportDetailScreen({ route }: Props): JSX.Element {
             >
               <Ionicons name="send" size={18} color={theme.colors.textOnPrimary} />
             </TouchableOpacity>
-          </View>
+          </StickyFooter>
         )}
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -329,14 +338,18 @@ const styles = StyleSheet.create({
   },
   errorText: { ...theme.textStyles.caption, color: theme.colors.error, flex: 1 },
 
+  /*
+   * StickyFooter จัดพื้นหลัง เส้นคั่น และระยะเผื่อแถบระบบให้แล้ว
+   * ที่นี่จึงเหลือแค่บอกว่าเรียงแนวนอน
+   *
+   * *** ห้ามใส่ padding หรือ paddingBottom ตรงนี้ ***
+   * style ที่ส่งเข้าไปจะถูกวางทับค่าของ StickyFooter ถ้าใส่ padding ลงไป
+   * ระยะเผื่อแถบระบบจะหายไป แล้วบั๊กเดิมจะกลับมาโดยที่ดูโค้ดแล้วไม่เห็นสาเหตุ
+   */
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: theme.spacing.sm,
-    padding: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
   },
   input: {
     ...theme.textStyles.body,
@@ -357,13 +370,11 @@ const styles = StyleSheet.create({
   },
   sendButtonOff: { opacity: 0.4 },
 
+  /* เหมือน inputBar ทุกอย่าง ต่างแค่พื้นหลังเทาเพื่อบอกว่าพิมพ์ต่อไม่ได้แล้ว */
   closedBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceAlt,
   },
   closedText: { ...theme.textStyles.caption, flex: 1 },

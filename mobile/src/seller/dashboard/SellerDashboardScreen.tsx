@@ -21,6 +21,7 @@ import postService from '../services/postService';
 import reservationService from '../../features/reservation/reservationService';
 import { errorMessage } from '../../core/services/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { useBadges, badgeLabel } from '../../context/BadgeContext';
 import { theme } from '../../core/theme/theme';
 import type { SellerStackParamList } from '../../navigation/types';
 
@@ -35,6 +36,21 @@ interface DashboardData {
 export default function SellerDashboardScreen(): JSX.Element {
   const navigation = useNavigation<Navigation>();
   const { user } = useAuth();
+
+  /*
+   * จุดแดงบนกระดิ่ง
+   *
+   * *** ทำไมร้านต้องมีกระดิ่ง ***
+   * ระบบส่งแจ้งเตือนถึงร้านอยู่หลายเรื่อง ทั้งการจองใหม่ การที่ลูกค้ายกเลิก (RQ-046)
+   * ผลการตรวจสอบเรื่องที่ถูกแจ้ง และการอนุมัติหรือระงับร้าน
+   * เดิมหน้าจอ "การแจ้งเตือน" ถูกลงทะเบียนไว้ใน stack ของร้านแล้ว (RootNavigator)
+   * แต่ไม่มีปุ่มไหนในแอปพาไปที่หน้านั้นเลยสักปุ่ม ข้อความจึงถูกบันทึกลงฐานข้อมูล
+   * ถูกต้อง แต่เจ้าของร้านไม่มีทางเปิดอ่าน เท่ากับฟีเจอร์นั้นเสร็จแค่ครึ่งเดียว
+   *
+   * BadgeContext ดึงจำนวนที่ยังไม่ได้อ่านให้ทุกบทบาทอยู่แล้ว ไม่ได้กรองเฉพาะลูกค้า
+   * จึงไม่ต้องแก้อะไรฝั่งข้อมูล ขาดแค่ปุ่มกับจุดแดงเท่านั้น
+   */
+  const { unreadNotifications, refresh: refreshBadges } = useBadges();
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,8 +92,10 @@ export default function SellerDashboardScreen(): JSX.Element {
         await load();
         if (active) setLoading(false);
       })();
+      // ดึงจำนวนแจ้งเตือนใหม่ทุกครั้งที่กลับมาหน้านี้ จุดแดงจะได้ไม่ค้างเลขเก่า
+      void refreshBadges();
       return () => { active = false; };
-    }, [load])
+    }, [load, refreshBadges])
   );
 
   async function handleRefresh(): Promise<void> {
@@ -125,13 +143,36 @@ export default function SellerDashboardScreen(): JSX.Element {
           />
         }
       >
-        {/* ---- ทักทาย ---- */}
+        {/* ---- ทักทาย + กระดิ่งแจ้งเตือน ---- */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>{store.store_name}</Text>
             <Text style={styles.subGreeting}>สวัสดี {user?.name ?? 'คุณ'}</Text>
           </View>
+
           <StatusBadge status={store.status} type="store" />
+
+          {/*
+            วางกระดิ่งไว้ขวาสุดของหัวหน้าจอ ตำแหน่งเดียวกับฝั่งลูกค้า
+            คนที่ใช้ทั้งสองบทบาทจะได้ไม่ต้องหาใหม่
+          */}
+          <TouchableOpacity
+            style={styles.bellButton}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Notifications')}
+            accessibilityLabel={
+              unreadNotifications > 0
+                ? `การแจ้งเตือน มี ${unreadNotifications} รายการที่ยังไม่ได้อ่าน`
+                : 'การแจ้งเตือน'
+            }
+          >
+            <Ionicons name="notifications-outline" size={22} color={theme.colors.textPrimary} />
+            {unreadNotifications > 0 ? (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{badgeLabel(unreadNotifications)}</Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
         </View>
 
         {/* ---- ร้านยังไม่อนุมัติ ---- */}
@@ -276,9 +317,45 @@ function StatCard({ icon, value, label, tone, customColor, onPress }: StatCardPr
 const styles = StyleSheet.create({
   content: { padding: theme.spacing.md, paddingBottom: theme.spacing.xxl },
 
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
   greeting: { ...theme.textStyles.title, fontSize: 22 },
   subGreeting: { ...theme.textStyles.bodyMuted },
+
+  /* กระดิ่งแจ้งเตือน ใช้ขนาดและเงาชุดเดียวกับฝั่งลูกค้าใน HomeScreen */
+  bellButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.card,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: theme.colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    /* ขอบสีพื้นหลังทำให้จุดแดงไม่ติดกับไอคอนจนดูเลอะเมื่อเลขยาว */
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+  },
+  notificationBadgeText: {
+    color: theme.colors.textOnPrimary,
+    fontSize: 10,
+    fontFamily: theme.fonts.bold,
+  },
 
   pendingBox: {
     flexDirection: 'row',

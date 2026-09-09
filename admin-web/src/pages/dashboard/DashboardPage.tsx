@@ -11,6 +11,7 @@ import Icon from '../../components/Icon';
 import DailyBarChart from '../../components/DailyBarChart';
 import StatusDonut from '../../components/StatusDonut';
 import adminService from '../../services/adminService';
+import { formatPrice } from '../../utils/format';
 import { errorMessage } from '../../services/apiClient';
 
 export default function DashboardPage(): JSX.Element {
@@ -139,6 +140,39 @@ export default function DashboardPage(): JSX.Element {
           label="เรื่องร้องเรียนที่ยังไม่จัดการ" value={stats.openReports} icon="flag"
           tone={stats.openReports > 0 ? 'error' : 'primary'}
           onClick={() => navigate('/reports')}
+        />
+
+        {/*
+          *** RQ-053 ปริมาณอาหารที่ช่วยไม่ให้กลายเป็นขยะ ***
+
+          ตัวชี้วัดคุณค่าหลักของโครงงาน มาจากข้อเสนอของอาจารย์ที่ปรึกษา
+
+          *** ทำไมหน่วยเป็น "ชุด" ไม่ใช่กิโลกรัม ***
+          ร้านอาหารริมทางไม่มีตาชั่ง และฐานข้อมูลไม่มีคอลัมน์น้ำหนัก
+          ถ้าจะแสดงเป็นกิโลกรัมต้องเดาน้ำหนักต่อชุดขึ้นมาเอง
+          ซึ่งจะทำให้ตัวเลขนี้กลายเป็นของแต่งขึ้น ทั้งที่การ์ดใบอื่นบนหน้าเดียวกัน
+          นับจากข้อมูลจริงทั้งหมด จึงเลือกแสดงสิ่งที่ตรวจสอบย้อนกลับได้จริงแทน
+
+          *** ทำไมข้อความบนการ์ดเขียนว่า "ถูกรับไปแล้ว" ไม่ใช่ "ช่วยโลก N กก." ***
+          เพื่อไม่เคลมเกินกว่าที่ข้อมูลรองรับ สิ่งที่ตัวเลขนี้ยืนยันได้จริง
+          มีแค่ว่ามีอาหารกี่ชุดที่มีคนมารับไป แทนที่จะถูกทิ้ง
+
+          ทั้งสองใบพาไปหน้าการจองที่กรอง completed ไว้แล้ว
+          เพื่อให้กดแล้วเห็น "ของที่นับอยู่บนการ์ด" ตรง ๆ ตามกติกาของหน้านี้
+        */}
+        <DashboardCard
+          label="อาหารที่ถูกรับไปแล้ว"
+          value={`${stats.foodSavedCount.toLocaleString('th-TH')} ชุด`}
+          icon="leaf" tone="primary"
+          hint="นับเฉพาะรายการที่ร้านยืนยันส่งมอบ"
+          onClick={() => navigate('/reservations?status=completed')}
+        />
+        <DashboardCard
+          label="มูลค่าอาหารที่ไม่ถูกทิ้ง"
+          value={formatPrice(stats.foodSavedValue)}
+          icon="cash" tone="primary"
+          hint="คิดจากราคาที่ลูกค้าจ่ายจริง"
+          onClick={() => navigate('/reservations?status=completed')}
         />
       </div>
 

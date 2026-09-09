@@ -187,31 +187,63 @@ export default function ReportListPage(): JSX.Element {
     {
       key: 'actions',
       title: 'การจัดการ',
-      width: '210px',
+      width: '280px',
       render: (row) => {
+        /*
+         * *** ทำไมเปลี่ยนจาก flex-wrap มาเป็น grid 2 คอลัมน์ ***
+         * เดิมปล่อยให้ปุ่มไหลขึ้นบรรทัดใหม่เอง ปุ่มแต่ละใบกว้างไม่เท่ากัน
+         * เพราะข้อความยาวไม่เท่ากัน บรรทัดที่ไหลลงมาจึงเริ่มไม่ตรงกับบรรทัดบน
+         * มองรวม ๆ แล้วเหมือนปุ่มวางมั่ว ทั้งที่จริงเรียงตามลำดับอยู่
+         *
+         * grid บังคับให้ทุกปุ่มกว้างเท่ากันและขอบตรงกันทุกแถว
+         * จำนวนปุ่มเปลี่ยนไปตามสถานะได้ โดยหน้าตายังเป็นระเบียบเหมือนเดิม
+         *
+         * ความกว้างคอลัมน์ต้องเป็น 280px เพราะ .btn ตั้ง white-space: nowrap ไว้
+         * ถ้าแคบกว่านี้ คำว่า "เริ่มตรวจสอบ" จะล้นออกนอกปุ่มแทนที่จะตัดบรรทัด
+         */
+        const gridStyle = {
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 8,
+        } as const;
+
         /*
          * ปุ่มดูรายละเอียดต้องมีทุกสถานะ รวมถึงเรื่องที่ปิดไปแล้ว
          * เพราะรูปหลักฐานและบทสนทนาคือหลักฐานว่าตัดสินใจเพราะอะไร
          * ถ้าเปิดดูย้อนหลังไม่ได้ การปิดเรื่องจะกลายเป็นกล่องดำที่ตรวจสอบไม่ได้
+         *
+         * *** ทำไมเปลี่ยนจาก btn-ghost เป็น btn-outline สีเทา ***
+         * ghost ไม่มีทั้งพื้นและขอบ พอวางปนกับปุ่มทึบในตาราง มันอ่านเหมือน
+         * ข้อความหลุดมาลอย ๆ ไม่เหมือนของที่กดได้ ใส่ขอบเทาให้รู้ว่าเป็นปุ่ม
+         * แต่ยังเบากว่าปุ่มหลัก เพราะเป็นการกระทำรอง
          */
-        const detailButton = (
-          <button className="btn btn-ghost btn-sm" onClick={() => setViewing(row)}>
+        const detailButton = (fullWidth: boolean): JSX.Element => (
+          <button
+            className="btn btn-outline btn-sm"
+            style={{
+              color: 'var(--color-text-secondary)',
+              borderColor: 'var(--color-border)',
+              ...(fullWidth ? { gridColumn: '1 / -1' } : {}),
+            }}
+            onClick={() => setViewing(row)}
+          >
             ดู / คุย
           </button>
         );
 
         if (row.status === 'resolved' || row.status === 'rejected') {
           return (
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              <span className="text-small text-muted">ปิดเรื่องแล้ว</span>
-              {detailButton}
+            <div style={gridStyle}>
+              <span className="text-small text-muted" style={{ alignSelf: 'center' }}>
+                ปิดเรื่องแล้ว
+              </span>
+              {detailButton(false)}
             </div>
           );
         }
 
         return (
-          <div className="row" style={{ flexWrap: 'wrap' }}>
-            {detailButton}
+          <div style={gridStyle}>
             {row.status === 'open' ? (
               <button
                 className="btn btn-outline btn-sm"
@@ -235,6 +267,13 @@ export default function ReportListPage(): JSX.Element {
             >
               ปฏิเสธ
             </button>
+
+            {/*
+              เรื่องที่ "กำลังตรวจสอบ" ไม่มีปุ่มเริ่มตรวจสอบแล้ว เหลือปุ่มเลขคี่
+              ถ้าปล่อยไว้ ปุ่มสุดท้ายจะกินแค่ครึ่งแถวแล้วเหลือช่องโหว่ข้าง ๆ
+              จึงให้ "ดู / คุย" กินเต็มแถวแทนในกรณีนั้น
+            */}
+            {detailButton(row.status !== 'open')}
           </div>
         );
       },

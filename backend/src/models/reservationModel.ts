@@ -72,6 +72,18 @@ export interface ExpiredReservationRow {
   customer_id: number;
 }
 
+/**
+ * แถวที่ใช้ตอนเตือนล่วงหน้าก่อนคิวหมดเวลา (RQ-045)
+ * ต้องมี food_name ติดมาด้วย เพราะข้อความเตือนต้องบอกว่าเป็นอาหารรายการไหน
+ * ลูกค้าหนึ่งคนอาจจองค้างไว้หลายร้านพร้อมกัน
+ */
+export interface ExpiringReservationRow {
+  reservation_id: number;
+  customer_id: number;
+  expires_at: string;
+  food_name: string;
+}
+
 export const reservationModel = {
   DETAIL_SELECT,
 
@@ -250,12 +262,97 @@ export const reservationModel = {
     );
   },
 
+  /**
+   * หาคิวที่ "ยังไม่หมดเวลา แต่ใกล้หมด" และยังไม่เคยถูกเตือน (RQ-045)
+   *
+   * *** ทำไมต้องมี expires_at > NOW() ***
+   * ถ้าไม่ใส่ คิวที่เลยเวลาไปแล้วจะติดมาด้วย แล้วลูกค้าจะได้ข้อความ
+   * "เหลืออีก 1 นาที" ทั้งที่คิวหมดไปแล้ว งานปิดคิวหมดอายุดูแลกรณีนั้นอยู่แล้ว
+   *
+   * *** ทำไม reminder_sent_at IS NULL ถึงสำคัญ ***
+   * งานเบื้องหลังวิ่งทุก 5 นาที แต่หน้าต่างการเตือนกว้าง 15 นาที
+   * คิวใบเดียวจึงเข้าเงื่อนไขได้ 3 รอบ ถ้าไม่มีคอลัมน์นี้จำไว้ ก็เตือนซ้ำ 3 ครั้ง
+   *
+   * @param minutes เตือนเมื่อเหลือเวลาน้อยกว่ากี่นาที
+   */
+  async findExpiringSoon(minutes: number): Promise<ExpiringReservationRow[]> {
+    return query<ExpiringReservationRow>(
+      `SELECT r.reservation_id, r.customer_id, r.expires_at, f.name AS food_name
+         FROM reservations r
+         JOIN foods f ON f.food_id = r.food_id
+        WHERE r.status IN ('confirmed','waiting')
+          AND r.reminder_sent_at IS NULL
+          AND r.expires_at > NOW()
+          AND r.expires_at <= DATE_ADD(NOW(), INTERVAL ? MINUTE)`,
+      [minutes]
+    );
+  },
+
+  /**
+   * จองสิทธิ์ส่งข้อความเตือนของคิวใบนี้ (RQ-045)
+   *
+   * ใช้หลักการเดียวกับ closeIfOpen คือยัดเงื่อนไขไว้ใน WHERE
+   * ให้ฐานข้อมูลเป็นคนตัดสินว่าใครได้ส่ง ไม่ใช่ให้โปรแกรมอ่านแล้วค่อยเขียน
+   * ถ้าอ่านก่อนแล้วค่อยเขียน สองรอบที่ทำงานคาบเกี่ยวกันจะอ่านเจอ NULL พร้อมกัน
+   * แล้วส่งข้อความคนละใบให้ลูกค้าคนเดียวกัน
+   *
+   * @returns true = เราได้สิทธิ์ส่ง / false = มีคนส่งไปก่อนแล้ว ห้ามส่งซ้ำ
+   */
+  async markReminderSent(reservationId: number): Promise<boolean> {
+    const result = await execute(
+      `UPDATE reservations
+          SET reminder_sent_at = NOW()
+        WHERE reservation_id = ? AND reminder_sent_at IS NULL`,
+      [reservationId]
+    );
+    return result.affectedRows === 1;
+  },
+
   async countAll(): Promise<number> {
     return countOf('SELECT COUNT(*) AS total FROM reservations');
   },
 
   async countToday(): Promise<number> {
     return countOf('SELECT COUNT(*) AS total FROM reservations WHERE DATE(created_at) = CURDATE()');
+  },
+
+  /**
+   * ปริมาณอาหารที่ช่วยไม่ให้กลายเป็นขยะ สะสมทั้งระบบ (RQ-053)
+   *
+   * *** ทำไมใช้ SUM ไม่ใช่ COUNT ***
+   * ลูกค้าจองครั้งเดียวเอาไปได้หลายชุด ถ้านับด้วย COUNT(*) จะได้ "จำนวนใบจอง"
+   * ซึ่งน้อยกว่าจำนวนอาหารจริง จองทีเดียว 3 ชุดจะนับได้แค่ 1
+   *
+   * *** ทำไมต้องมี COALESCE ***
+   * ถ้ายังไม่มีรายการ completed เลย SUM จะคืน NULL ไม่ใช่ 0
+   * แล้วหน้าเว็บจะแสดงเป็นช่องว่างแทนเลข 0
+   *
+   * *** ตัวเลขนี้ลดลงได้ในกรณีเดียว ***
+   * ถ้าผู้ดูแลลบบัญชีผู้ใช้หรือลบร้าน ฐานข้อมูลตั้ง ON DELETE CASCADE ไว้
+   * การจองของคนนั้นจะถูกลบตามไปด้วย ยอดสะสมจึงลดลง
+   * ยอมรับได้ เพราะข้อมูลต้นทางหายไปจริง ไม่ใช่การนับผิด
+   *
+   * @param storeId ใส่เมื่อต้องการเฉพาะร้านเดียว ไม่ใส่ = ทั้งระบบ
+   */
+  async sumSaved(storeId?: number): Promise<{ count: number; value: number }> {
+    const rows = await query<{ total_count: string | null; total_value: string | null }>(
+      `SELECT COALESCE(SUM(quantity), 0)    AS total_count,
+              COALESCE(SUM(total_price), 0) AS total_value
+         FROM reservations
+        WHERE status = 'completed'
+          ${storeId === undefined ? '' : 'AND store_id = ?'}`,
+      storeId === undefined ? [] : [storeId]
+    );
+
+    /*
+     * mysql2 คืนค่า SUM ของ DECIMAL มาเป็น string เพื่อไม่ให้เลขทศนิยมเพี้ยน
+     * ต้องแปลงเป็น number เองก่อนส่งออก ไม่งั้นฝั่งหน้าเว็บจะเอาไปบวกลบต่อไม่ได้
+     */
+    const row = rows[0];
+    return {
+      count: Number(row?.total_count ?? 0),
+      value: Number(row?.total_value ?? 0),
+    };
   },
 
   /**

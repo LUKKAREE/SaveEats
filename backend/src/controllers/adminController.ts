@@ -92,7 +92,7 @@ export const adminController = {
     const [
       customers, sellers, pendingStores, approvedStores,
       activePosts, totalReservations, todayReservations, openReports,
-      dailyRaw, statusRaw,
+      dailyRaw, statusRaw, saved,
     ] = await Promise.all([
       userModel.countByRole('customer'),
       userModel.countByRole('seller'),
@@ -104,11 +104,16 @@ export const adminController = {
       reportModel.countOpen(),
       reservationModel.countByDay(DAILY_DAYS),
       reservationModel.countByStatus(),
+      // RQ-053 ปริมาณอาหารที่ช่วยไม่ให้เป็นขยะ ไม่ส่ง storeId = เอาทั้งระบบ
+      reservationModel.sumSaved(),
     ]);
 
     const stats: DashboardStats = {
       customers, sellers, pendingStores, approvedStores,
       activePosts, totalReservations, todayReservations, openReports,
+
+      foodSavedCount: saved.count,
+      foodSavedValue: saved.value,
 
       daily: fillMissingDays(dailyRaw, DAILY_DAYS),
 

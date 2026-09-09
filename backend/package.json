@@ -11,7 +11,8 @@
     "test": "tsx tests/selfTest.ts",
     "check-db": "tsx tools/checkDatabase.ts",
     "import-cloud": "tsx tools/importToCloud.ts",
-    "migrate": "tsx tools/runMigration.ts"
+    "migrate": "tsx tools/runMigration.ts",
+    "loadtest": "tsx tools/loadTest.ts"
   },
   "keywords": [
     "saveeats",

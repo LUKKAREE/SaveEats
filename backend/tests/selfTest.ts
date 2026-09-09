@@ -40,6 +40,11 @@ interface FakeReservation {
   qr_token: string; reservation_code: string; status: ReservationStatus;
   pickup_start: string; pickup_end: string; expires_at: string;
   food_name: string; store_name: string;
+  /*
+   * เวลาที่เตือน "ใกล้หมดเวลารับอาหาร" ไปแล้ว (RQ-045)
+   * เป็น optional เพราะแถวที่เพิ่งสร้างยังไม่มีค่านี้ เหมือน DEFAULT NULL ของจริง
+   */
+  reminder_sent_at?: string | null;
 }
 
 interface FakeReview {
@@ -288,6 +293,38 @@ mock('../src/models/reservationModel', {
     db.reservations
       .filter((r) => r.customer_id === cid && r.post_id === Number(pid) && ['confirmed', 'waiting'].includes(r.status))
       .reduce((sum, r) => sum + r.quantity, 0),
+  /*
+   * เตือนก่อนคิวหมดเวลา (RQ-045)
+   * ของจริงให้ MySQL กรองด้วย NOW() กับ DATE_ADD ตัวจำลองคิดเองด้วย Date
+   * เงื่อนไขต้องตรงกันทุกข้อ ไม่งั้นเทสต์จะผ่านทั้งที่ของจริงหาไม่เจอ
+   */
+  findExpiringSoon: async (minutes: number) => {
+    const now = Date.now();
+    const limit = now + minutes * 60 * 1000;
+    return db.reservations
+      .filter((r) => {
+        if (!['confirmed', 'waiting'].includes(r.status)) return false;
+        if ((r.reminder_sent_at ?? null) !== null) return false;
+        const at = new Date(r.expires_at.replace(' ', 'T')).getTime();
+        return at > now && at <= limit;
+      })
+      .map((r) => ({
+        reservation_id: r.reservation_id,
+        customer_id: r.customer_id,
+        expires_at: r.expires_at,
+        food_name: r.food_name,
+      }));
+  },
+  /*
+   * จำลอง UPDATE ... WHERE reminder_sent_at IS NULL ของจริง
+   * คืน true เฉพาะคนแรกที่เข้ามา คนถัดไปได้ false จึงไม่ส่งข้อความซ้ำ
+   */
+  markReminderSent: async (id: number) => {
+    const r = db.reservations.find((x) => x.reservation_id === Number(id));
+    if (!r || (r.reminder_sent_at ?? null) !== null) return false;
+    r.reminder_sent_at = fmt(new Date());
+    return true;
+  },
 });
 
 mock('../src/models/behaviorScoreModel', {
@@ -516,6 +553,90 @@ async function main(): Promise<void> {
       await reservationService.cancel(r4.reservation_id, { userId: 99, role: 'customer', email: '' });
       throw new Error('ไม่ควรสำเร็จ');
     } catch (e) { assert.strictEqual(statusCodeOf(e), 403); }
+  });
+
+  /*
+   * RQ-046 ครึ่งหลัง : "แจ้งเตือนร้านค้าเมื่อมีการจองใหม่ หรือมีการยกเลิก"
+   * ครึ่งแรก (จองใหม่) ถูกทดสอบไปแล้วตอนสร้างการจอง
+   * ข้อนี้ทดสอบครึ่งที่เหลือ คือฝั่งยกเลิก ซึ่งเดิมไม่มีโค้ดรองรับเลย
+   */
+  await t('ลูกค้ายกเลิก แล้วร้านได้รับแจ้งเตือนด้วย (RQ-046)', async () => {
+    post0.quantity_left = 5;
+    const r5 = await reservationService.create(6, { postId: 1, quantity: 1 });
+    // ล้างทิ้งก่อน เพราะตอนสร้างการจองร้านเพิ่งได้ข้อความ "มีการจองใหม่" ไป
+    // ถ้าไม่ล้าง เทสต์จะผ่านด้วยข้อความใบเก่า ทั้งที่ฝั่งยกเลิกยังไม่ได้ทำอะไร
+    db.notifications.length = 0;
+
+    await reservationService.cancel(r5.reservation_id, { userId: 6, role: 'customer', email: '' });
+
+    assert.ok(
+      db.notifications.some((n) => n.userId === store0.user_id),
+      'ร้านต้องได้รับแจ้งเตือนเมื่อลูกค้าเป็นฝ่ายยกเลิก'
+    );
+  });
+
+  await t('ร้านยกเลิกเอง ไม่ต้องส่งข้อความบอกตัวเอง (RQ-046)', async () => {
+    post0.quantity_left = 5;
+    const r6 = await reservationService.create(6, { postId: 1, quantity: 1 });
+    db.notifications.length = 0;
+
+    await reservationService.cancel(r6.reservation_id, {
+      userId: store0.user_id, role: 'seller', email: '',
+    });
+
+    assert.strictEqual(
+      db.notifications.filter((n) => n.userId === store0.user_id).length, 0,
+      'ร้านที่กดยกเลิกเองไม่ควรได้ข้อความแจ้งว่ามีคนยกเลิก'
+    );
+    assert.ok(
+      db.notifications.some((n) => n.userId === 6),
+      'ลูกค้าต้องได้รับแจ้งเตือนว่าร้านยกเลิกการจอง'
+    );
+  });
+
+  console.log('\n=== ทดสอบการเตือนก่อนคิวหมดเวลา (RQ-045) ===');
+
+  await t('คิวใกล้หมดเวลา ลูกค้าได้รับการเตือน และไม่ถูกเตือนซ้ำ', async () => {
+    post0.quantity_left = 5;
+    const r7 = await reservationService.create(8, { postId: 1, quantity: 1 });
+    const row = db.reservations.find((x) => x.reservation_id === r7.reservation_id);
+    if (row === undefined) throw new Error('ไม่พบการจอง');
+
+    // ดันให้เหลือเวลาอีก 10 นาที ซึ่งอยู่ในหน้าต่างการเตือน 15 นาที
+    row.expires_at = fmt(new Date(Date.now() + 10 * 60 * 1000));
+    db.notifications.length = 0;
+
+    await reservationService.remindExpiringSoon(15);
+    assert.strictEqual(
+      db.notifications.filter((n) => n.userId === 8).length, 1,
+      'ลูกค้าต้องได้ข้อความเตือน 1 ข้อความ'
+    );
+
+    /*
+     * ยิงซ้ำอีกรอบ = จำลองว่างานเบื้องหลังวิ่งรอบถัดไปในอีก 5 นาที
+     * ถ้าไม่มี reminder_sent_at กันไว้ ตรงนี้จะกลายเป็น 2 ข้อความ
+     */
+    await reservationService.remindExpiringSoon(15);
+    assert.strictEqual(
+      db.notifications.filter((n) => n.userId === 8).length, 1,
+      'รอบที่สองต้องไม่เตือนซ้ำ'
+    );
+  });
+
+  await t('คิวที่ยังเหลือเวลาอีกนาน ยังไม่ถูกเตือน', async () => {
+    post0.quantity_left = 5;
+    const r8 = await reservationService.create(9, { postId: 1, quantity: 1 });
+    const row = db.reservations.find((x) => x.reservation_id === r8.reservation_id);
+    if (row === undefined) throw new Error('ไม่พบการจอง');
+
+    row.expires_at = fmt(new Date(Date.now() + 60 * 60 * 1000)); // เหลืออีก 1 ชั่วโมง
+    db.notifications.length = 0;
+
+    await reservationService.remindExpiringSoon(15);
+    assert.strictEqual(
+      db.notifications.filter((n) => n.userId === 9).length, 0,
+      'คิวที่ยังเหลือเวลาเกินหน้าต่างการเตือน ต้องยังไม่ถูกเตือน'
+    );
   });
 
   console.log('\n=== ทดสอบการแจ้งเตือนเรื่องร้องเรียน ===');

@@ -224,6 +224,9 @@ CREATE TABLE reservations (
   pickup_start      DATETIME      NOT NULL,
   pickup_end        DATETIME      NOT NULL,
   expires_at        DATETIME      NOT NULL,
+  -- เวลาที่ส่งข้อความ "ใกล้หมดเวลารับอาหาร" ให้ลูกค้าไปแล้ว (RQ-045)
+  -- NULL = ยังไม่เคยเตือน มีไว้กันงานเบื้องหลังเตือนซ้ำทุก 5 นาที
+  reminder_sent_at  DATETIME      DEFAULT NULL,
   completed_at      DATETIME      DEFAULT NULL,       -- เวลาที่ร้านกดยืนยันรับอาหาร
   cancelled_at      DATETIME      DEFAULT NULL,
   created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -165,6 +165,8 @@ export interface Reservation {
   pickup_start: string;
   pickup_end: string;
   expires_at: string;
+  /** เวลาที่เตือน "ใกล้หมดเวลารับอาหาร" ไปแล้ว null = ยังไม่เคยเตือน (RQ-045) */
+  reminder_sent_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
   created_at: string;
