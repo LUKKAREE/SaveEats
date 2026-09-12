@@ -42,6 +42,7 @@ import MyReportsScreen from '../features/report/screens/MyReportsScreen';
 import ReportDetailScreen from '../features/report/screens/ReportDetailScreen';
 import NotificationScreen from '../features/notification/screens/NotificationScreen';
 import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
+import ChangePasswordScreen from '../features/auth/screens/ChangePasswordScreen';
 import ReportScreen from '../features/report/screens/ReportScreen';
 
 import SellerStoreScreen from '../seller/store/SellerStoreScreen';
@@ -113,6 +114,7 @@ function CustomerNavigator(): JSX.Element {
       <CustomerStack.Screen name="ReportDetail" component={ReportDetailScreen} options={{ title: 'รายละเอียดเรื่องที่แจ้ง' }} />
       <CustomerStack.Screen name="Notifications" component={NotificationScreen} options={{ title: 'การแจ้งเตือน' }} />
       <CustomerStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'แก้ไขข้อมูลส่วนตัว' }} />
+      <CustomerStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'เปลี่ยนรหัสผ่าน' }} />
       <CustomerStack.Screen name="Report" component={ReportScreen} options={{ title: 'แจ้งปัญหา' }} />
       <CustomerStack.Screen name="StoreLocation" component={StoreLocationScreen} options={{ title: 'ตำแหน่งร้าน' }} />
     </CustomerStack.Navigator>
@@ -152,6 +154,7 @@ function SellerNavigator(): JSX.Element {
         ใช้หน้าจอตัวเดียวกัน ไม่ต้องเขียนซ้ำ
       */}
       <SellerStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'แก้ไขข้อมูลส่วนตัว' }} />
+      <SellerStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'เปลี่ยนรหัสผ่าน' }} />
       <SellerStack.Screen name="ReservationDetail" component={ReservationDetailScreen} options={{ title: 'รายละเอียดการจอง' }} />
       <SellerStack.Screen name="Notifications" component={NotificationScreen} options={{ title: 'การแจ้งเตือน' }} />
       <SellerStack.Screen name="Report" component={ReportScreen} options={{ title: 'แจ้งปัญหา' }} />

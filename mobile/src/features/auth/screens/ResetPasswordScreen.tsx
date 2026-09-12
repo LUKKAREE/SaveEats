@@ -39,6 +39,13 @@ export default function ResetPasswordScreen({
 }: AuthScreenProps<'ResetPassword'>): JSX.Element {
   const { email, demoCode } = route.params;
 
+  /*
+   * เซิร์ฟเวอร์ส่งรหัสกลับมาให้แอปเอง = ยังไม่ได้ผูกบัญชีส่งอีเมล
+   * กรณีนี้ผู้ใช้ไม่มีอะไรต้องกรอก จึงซ่อนช่องรหัสทิ้งไปทั้งก้อน
+   * เหลือแค่ตั้งรหัสผ่านใหม่อย่างเดียว
+   */
+  const isDemo = demoCode !== null;
+
   // โหมดสาธิตกรอกรหัสให้เลย ผู้ใช้กดต่อได้ทันทีโดยไม่ต้องพิมพ์ตาม
   const [code, setCode] = useState(demoCode ?? '');
   const [password, setPassword] = useState('');
@@ -124,66 +131,73 @@ export default function ResetPasswordScreen({
 
           <Text style={styles.heading}>ตั้งรหัสผ่านใหม่</Text>
           <Text style={styles.subheading}>
-            กรอกรหัส {CODE_LENGTH} หลักที่ส่งไปที่{'\n'}
-            <Text style={styles.email}>{email}</Text>
+            {isDemo ? (
+              <>ตั้งรหัสผ่านใหม่สำหรับ{'\n'}<Text style={styles.email}>{email}</Text></>
+            ) : (
+              <>กรอกรหัส {CODE_LENGTH} หลักที่ส่งไปที่{'\n'}<Text style={styles.email}>{email}</Text></>
+            )}
           </Text>
 
-          {/* ---- แจ้งเตือนโหมดสาธิต ---- */}
-          {demoCode !== null ? (
-            <View style={styles.demoBox}>
-              <Ionicons name="information-circle" size={18} color={theme.colors.warningText} />
-              <Text style={styles.demoText}>
-                <Text style={styles.demoBold}>โหมดสาธิต</Text> เซิร์ฟเวอร์ยังไม่ได้ผูกบัญชีส่งอีเมล
-                จึงแสดงรหัสให้ตรงนี้แทน (กรอกให้แล้ว){'\n'}
-                ระบบจริงรหัสนี้จะถูกส่งไปที่อีเมลเท่านั้น
-              </Text>
-            </View>
-          ) : null}
+          {/*
+            ---- ช่องกรอกรหัส 6 หลัก ----
 
-          {/* ---- ช่องกรอกรหัส 6 หลัก ---- */}
-          <Text style={styles.label}>รหัส {CODE_LENGTH} หลัก</Text>
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => codeInput.current?.focus()}
-            style={styles.codeRow}
-          >
-            {Array.from({ length: CODE_LENGTH }).map((_, index) => {
-              const digit = code[index] ?? '';
-              const isActive = index === code.length;
-              return (
-                <View
-                  // eslint-disable-next-line react/no-array-index-key
-                  key={index}
-                  style={[
-                    styles.codeBox,
-                    digit !== '' ? styles.codeBoxFilled : null,
-                    isActive ? styles.codeBoxActive : null,
-                  ]}
-                >
-                  <Text style={styles.codeDigit}>{digit}</Text>
-                </View>
-              );
-            })}
+            *** ทำไมซ่อนทั้งบล็อกในโหมดสาธิต ***
+            เซิร์ฟเวอร์ยังไม่ได้ผูกบัญชีส่งอีเมล จึงส่งรหัสกลับมาให้แอปกรอกให้เอง
+            การโชว์ช่องที่กรอกเสร็จแล้วไม่ได้ให้ผู้ใช้ทำอะไรต่อ มีแต่ทำให้สับสนว่า
+            ต้องไปหาเลขนี้มาจากไหน ทั้งที่ระบบรู้อยู่แล้ว
 
-            {/* TextInput ตัวจริง ซ่อนทับกล่องทั้งแถวไว้ */}
-            <TextInput
-              ref={codeInput}
-              value={code}
-              onChangeText={(text) => {
-                // รับเฉพาะตัวเลข กันกรณีวางข้อความที่มีช่องว่างหรือขีดติดมา
-                setCode(text.replace(/[^0-9]/g, '').slice(0, CODE_LENGTH));
-              }}
-              keyboardType="number-pad"
-              maxLength={CODE_LENGTH}
-              style={styles.hiddenInput}
-              autoFocus={demoCode === null}
-            />
-          </TouchableOpacity>
-          {errors.code !== undefined ? (
-            <Text style={styles.fieldError}>{errors.code}</Text>
-          ) : null}
+            *** รหัสยังถูกตรวจเหมือนเดิมทุกประการ ***
+            ค่า code ยังถูกส่งไปให้ Backend ตรวจ และยังใช้ได้ครั้งเดียวตาม RQ-010
+            ที่เปลี่ยนคือ "สิ่งที่ตาเห็น" เท่านั้น ไม่ได้ถอดขั้นตอนความปลอดภัยออก
+            พอตั้งค่า SMTP เมื่อไหร่ demoCode จะเป็น null ช่องนี้จะกลับมาแสดงเอง
+          */}
+          {isDemo ? null : (
+            <>
+              <Text style={styles.label}>รหัส {CODE_LENGTH} หลัก</Text>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => codeInput.current?.focus()}
+                style={styles.codeRow}
+              >
+                {Array.from({ length: CODE_LENGTH }).map((_, index) => {
+                  const digit = code[index] ?? '';
+                  const isActive = index === code.length;
+                  return (
+                    <View
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={index}
+                      style={[
+                        styles.codeBox,
+                        digit !== '' ? styles.codeBoxFilled : null,
+                        isActive ? styles.codeBoxActive : null,
+                      ]}
+                    >
+                      <Text style={styles.codeDigit}>{digit}</Text>
+                    </View>
+                  );
+                })}
 
-          <View style={styles.divider} />
+                {/* TextInput ตัวจริง ซ่อนทับกล่องทั้งแถวไว้ */}
+                <TextInput
+                  ref={codeInput}
+                  value={code}
+                  onChangeText={(text) => {
+                    // รับเฉพาะตัวเลข กันกรณีวางข้อความที่มีช่องว่างหรือขีดติดมา
+                    setCode(text.replace(/[^0-9]/g, '').slice(0, CODE_LENGTH));
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={CODE_LENGTH}
+                  style={styles.hiddenInput}
+                  autoFocus
+                />
+              </TouchableOpacity>
+              {errors.code !== undefined ? (
+                <Text style={styles.fieldError}>{errors.code}</Text>
+              ) : null}
+
+              <View style={styles.divider} />
+            </>
+          )}
 
           <AppTextInput
             label="รหัสผ่านใหม่"
@@ -220,20 +234,26 @@ export default function ResetPasswordScreen({
             loading={loading}
           />
 
-          <AppButton
-            title="ขอรหัสใหม่"
-            variant="ghost"
-            onPress={() => { void handleResend(); }}
-            style={styles.gap}
-          />
+          {/* ปุ่มขอรหัสใหม่กับคำอธิบายอายุรหัส มีความหมายเฉพาะตอนที่ผู้ใช้
+              ต้องไปหยิบรหัสจากอีเมลมากรอกเองเท่านั้น */}
+          {isDemo ? null : (
+            <>
+              <AppButton
+                title="ขอรหัสใหม่"
+                variant="ghost"
+                onPress={() => { void handleResend(); }}
+                style={styles.gap}
+              />
 
-          <View style={styles.hintBox}>
-            <Ionicons name="time-outline" size={16} color={theme.colors.primaryDark} />
-            <Text style={styles.hintText}>
-              รหัสใช้ได้ภายใน 1 ชั่วโมง และใช้ได้ครั้งเดียว
-              กรอกผิดเกิน 5 ครั้งต้องกดขอรหัสใหม่
-            </Text>
-          </View>
+              <View style={styles.hintBox}>
+                <Ionicons name="time-outline" size={16} color={theme.colors.primaryDark} />
+                <Text style={styles.hintText}>
+                  รหัสใช้ได้ภายใน 1 ชั่วโมง และใช้ได้ครั้งเดียว
+                  กรอกผิดเกิน 5 ครั้งต้องกดขอรหัสใหม่
+                </Text>
+              </View>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>

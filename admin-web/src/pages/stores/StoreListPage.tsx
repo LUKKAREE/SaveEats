@@ -38,6 +38,15 @@ export default function StoreListPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [suspendTarget, setSuspendTarget] = useState<StoreForAdmin | null>(null);
+  /*
+    ร้านที่กำลังจะถูกดึงกลับมาขายใหม่ (ปลดระงับ หรือ กลับคำที่เคยไม่อนุมัติ)
+
+    *** ทำไมแยกตัวแปรกับ suspendTarget ***
+    สองงานนี้ใช้กล่องยืนยันคนละใบ เพราะการระงับต้องกรอกเหตุผลเสมอ (ร้านต้องรู้ว่าโดนเพราะอะไร)
+    แต่การปลดระงับไม่ต้อง ถ้าเอามารวมเป็นตัวแปรเดียว จะได้กล่องที่ทำสองอย่างครึ่ง ๆ กลาง ๆ
+    และต้องมี if เช็คสถานะเต็มไปหมดในทุกช่องของกล่อง
+  */
+  const [restoreTarget, setRestoreTarget] = useState<StoreForAdmin | null>(null);
   const [processing, setProcessing] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
@@ -78,6 +87,71 @@ export default function StoreListPage(): JSX.Element {
     }
   }
 
+  /**
+   * ดึงร้านกลับมาขายใหม่ ใช้ได้ทั้งร้านที่ถูกระงับและร้านที่เคยไม่อนุมัติ
+   *
+   * *** ทำไมเรียก approveStore ไม่ใช่ endpoint ปลดระงับตัวใหม่ ***
+   * ฝั่ง Backend เก็บสถานะร้านเป็นค่าเดียว (pending / approved / rejected / suspended)
+   * การปลดระงับกับการอนุมัติจึงเป็นการกระทำเดียวกันคือ "ตั้งสถานะเป็น approved"
+   * เส้น PUT /admin/stores/:id/approve ทำสิ่งนี้อยู่แล้ว และไม่ได้ห้ามว่าร้านต้องเป็น pending ก่อน
+   * การเพิ่มเส้นใหม่ที่ทำงานเหมือนกันเป๊ะมีแต่จะเพิ่มของให้ดูแลโดยไม่ได้อะไรกลับมา
+   *
+   * ผลข้างเคียงที่ตั้งใจ : ร้านจะได้รับแจ้งเตือน "ร้านของคุณได้รับการอนุมัติ" ซึ่งอ่านแล้วเข้าใจตรงกัน
+   * ทั้งกรณีอนุมัติครั้งแรกและกรณีถูกปลดระงับ
+   */
+  async function handleRestore(): Promise<void> {
+    if (!restoreTarget) return;
+    setProcessing(true);
+    try {
+      await adminService.approveStore(restoreTarget.store_id);
+      setRestoreTarget(null);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  /**
+   * ปุ่มในช่อง "การจัดการ" เปลี่ยนตามสถานะของร้าน
+   *
+   * *** ทำไมต้องมีปุ่มให้ทุกสถานะที่ย้อนกลับได้ ***
+   * เดิมหน้านี้แสดงปุ่มเฉพาะร้าน approved ร้านที่ถูกระงับหรือไม่อนุมัติจึงกลายเป็นทางตัน
+   * ผู้ดูแลระงับร้านผิดคนแล้วแก้คืนไม่ได้เลย ต้องไปแก้ในฐานข้อมูลเอง
+   * ซึ่งขัดกับ RQ-065 ที่ระบุว่าการระงับต้องไม่ทำให้ข้อมูลร้านหาย (แปลว่าต้องกู้คืนได้)
+   *
+   * pending ไม่มีปุ่มที่นี่โดยตั้งใจ เพราะการอนุมัติครั้งแรกต้องดูรายละเอียดร้านประกอบ
+   * ซึ่งมีหน้าเฉพาะอยู่แล้วที่เมนู "ร้านรออนุมัติ"
+   */
+  function renderAction(row: StoreForAdmin): JSX.Element {
+    if (row.status === 'approved') {
+      return (
+        <button
+          className="btn btn-outline btn-sm"
+          style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
+          onClick={() => setSuspendTarget(row)}
+        >
+          ระงับร้าน
+        </button>
+      );
+    }
+
+    if (row.status === 'suspended' || row.status === 'rejected') {
+      return (
+        <button
+          className="btn btn-outline btn-sm"
+          style={{ color: 'var(--color-success)', borderColor: 'var(--color-success)' }}
+          onClick={() => setRestoreTarget(row)}
+        >
+          {row.status === 'suspended' ? 'ปลดระงับ' : 'อนุมัติร้าน'}
+        </button>
+      );
+    }
+
+    return <span className="text-small text-muted">ดูที่เมนูร้านรออนุมัติ</span>;
+  }
+
   const columns: Array<Column<StoreForAdmin>> = [
     {
       key: 'store_name',
@@ -116,22 +190,7 @@ export default function StoreListPage(): JSX.Element {
         return <span style={{ color, fontWeight: 600 }}>{score}</span>;
       },
     },
-    {
-      key: 'actions',
-      title: 'การจัดการ',
-      render: (row) =>
-        row.status === 'approved' ? (
-          <button
-            className="btn btn-outline btn-sm"
-            style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
-            onClick={() => setSuspendTarget(row)}
-          >
-            ระงับร้าน
-          </button>
-        ) : (
-          <span className="text-small text-muted">-</span>
-        ),
-    },
+    { key: 'actions', title: 'การจัดการ', render: renderAction },
   ];
 
   function handleSearch(e: FormEvent<HTMLFormElement>): void {
@@ -189,6 +248,22 @@ export default function StoreListPage(): JSX.Element {
         loading={processing}
         onConfirm={(reason) => { void handleSuspend(reason); }}
         onCancel={() => setSuspendTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={restoreTarget !== null}
+        title={restoreTarget?.status === 'suspended' ? 'ปลดระงับร้านค้า' : 'อนุมัติร้านค้า'}
+        message={
+          restoreTarget?.status === 'suspended'
+            ? `ร้าน "${restoreTarget?.store_name ?? ''}" จะกลับมาลงขายได้ตามปกติ `
+              + 'อาหารของร้านจะปรากฏให้ลูกค้าเห็นอีกครั้ง และเจ้าของร้านจะได้รับแจ้งเตือน'
+            : `ร้าน "${restoreTarget?.store_name ?? ''}" จะเปลี่ยนเป็นอนุมัติแล้ว `
+              + 'และเริ่มลงขายอาหารได้ทันที'
+        }
+        confirmLabel={restoreTarget?.status === 'suspended' ? 'ยืนยันปลดระงับ' : 'ยืนยันอนุมัติ'}
+        loading={processing}
+        onConfirm={() => { void handleRestore(); }}
+        onCancel={() => setRestoreTarget(null)}
       />
     </>
   );

@@ -48,6 +48,25 @@ export default function ForgotPasswordScreen({
     setLoading(true);
     try {
       const result = await authService.forgotPassword(email.trim());
+
+      /*
+       * *** โหมดสาธิต : ข้ามหน้าคั่น "ส่งรหัสให้แล้ว" ไปเลย ***
+       *
+       * หน้าคั่นนั้นมีไว้บอกผู้ใช้ให้ไปเปิดกล่องจดหมาย ซึ่งมีประโยชน์ต่อเมื่อ
+       * เซิร์ฟเวอร์ส่งอีเมลได้จริง ตอนที่ยังไม่ได้ผูกบัญชีส่งอีเมล ผู้ใช้ไม่มี
+       * จดหมายให้เปิด การบังคับให้หยุดอ่านหน้านั้นจึงเป็นการขวางทางเปล่า ๆ
+       *
+       * พอตั้งค่า SMTP เมื่อไหร่ demoCode จะกลายเป็น null เอง เงื่อนไขนี้ก็จะ
+       * ไม่เข้า และหน้าคั่นจะกลับมาทำงานตามเดิมอัตโนมัติ ไม่ต้องแก้โค้ดซ้ำ
+       */
+      if (result.demoCode !== null) {
+        navigation.navigate('ResetPassword', {
+          email: email.trim(),
+          demoCode: result.demoCode,
+        });
+        return;
+      }
+
       setDemoCode(result.demoCode);
       setSent(true);
     } catch (err) {

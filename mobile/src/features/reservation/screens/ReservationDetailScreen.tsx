@@ -160,6 +160,22 @@ export default function ReservationDetailScreen({ route, navigation }: Props): J
     ? Math.round(((normal - paid) / normal) * 100)
     : 0;
 
+  /*
+   * สถานะที่เอาไปแสดงบนป้าย อาจไม่ตรงกับสถานะในฐานข้อมูลชั่วคราว
+   *
+   * *** ทำไมต้องมีตัวแปรนี้ ***
+   * งานเบื้องหลังปิดคิวที่หมดเวลาเป็นรอบ ๆ ทุก 5 นาที ไม่ได้ปิดทันทีที่ครบเวลา
+   * ระหว่างนั้นสถานะในฐานข้อมูลยังเป็น confirmed อยู่ ป้ายจึงขึ้นว่า "จองสำเร็จ"
+   * ทั้งที่นาฬิกาข้างล่างขึ้นว่า "คิวหมดเวลาแล้ว" ไปแล้ว อ่านแล้วขัดกันเอง
+   * (พบตอนทดสอบ 10 ก.ย. 2569 : นาฬิกาหมดตอน 05:18 แต่ป้ายยังเขียนว่าจองสำเร็จจนถึง 05:22)
+   *
+   * ตรงนี้แก้แค่สิ่งที่ "ตาเห็น" ให้สอดคล้องกันเท่านั้น ไม่ได้ไปแก้ข้อมูลจริง
+   * การปิดคิวและคืนของยังเป็นหน้าที่ของงานเบื้องหลังฝั่งเซิร์ฟเวอร์เหมือนเดิม
+   * เพราะถ้าให้แอปเป็นคนตัดสิน เครื่องที่ตั้งเวลาผิดจะปิดคิวคนอื่นทิ้งได้
+   */
+  const isOpenStatus = item.status === 'confirmed' || item.status === 'waiting';
+  const displayStatus = isOpenStatus && timer.isExpired ? 'expired' : item.status;
+
   // QR ใช้ได้เฉพาะตอนที่ยังต้องไปรับเท่านั้น
   const showQr = !isSeller && (item.status === 'confirmed' || item.status === 'waiting');
   const canCancel = !isSeller && (item.status === 'confirmed' || item.status === 'waiting');
@@ -210,7 +226,7 @@ export default function ReservationDetailScreen({ route, navigation }: Props): J
             <Text style={styles.queueLabel}>หมายเลขคิว</Text>
             <Text style={styles.queueCode}>{item.reservation_code}</Text>
           </View>
-          <StatusBadge status={item.status} />
+          <StatusBadge status={displayStatus} />
         </View>
 
         {/* ---- QR (เฉพาะลูกค้า และเฉพาะที่ยังไม่รับ) ---- */}

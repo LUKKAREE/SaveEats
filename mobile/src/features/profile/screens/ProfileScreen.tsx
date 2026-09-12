@@ -97,6 +97,11 @@ export default function ProfileScreen(): JSX.Element {
           label: 'เรื่องที่ฉันแจ้ง',
           onPress: () => navigation.navigate('MyReports'),
         },
+        {
+          icon: 'key-outline',
+          label: 'เปลี่ยนรหัสผ่าน',
+          onPress: () => navigation.navigate('ChangePassword'),
+        },
       ]
     : [
         {
@@ -119,6 +124,11 @@ export default function ProfileScreen(): JSX.Element {
           icon: 'flag-outline',
           label: 'เรื่องที่ฉันแจ้ง',
           onPress: () => navigation.navigate('MyReports'),
+        },
+        {
+          icon: 'key-outline',
+          label: 'เปลี่ยนรหัสผ่าน',
+          onPress: () => navigation.navigate('ChangePassword'),
         },
       ];
 

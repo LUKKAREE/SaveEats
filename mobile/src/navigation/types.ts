@@ -120,6 +120,12 @@ export type CustomerStackParamList = {
   ReportDetail: ReportDetailParams;
   Notifications: undefined;
   EditProfile: undefined;
+  /**
+   * เปลี่ยนรหัสผ่านตอนที่ยังล็อกอินอยู่ (คนละอย่างกับ ResetPassword ใน AuthStack)
+   * ResetPassword ใช้ตอนเข้าแอปไม่ได้ ต้องยืนยันตัวตนผ่านอีเมล
+   * ส่วนหน้านี้ใช้รหัสผ่านเดิมเป็นตัวยืนยันแทน
+   */
+  ChangePassword: undefined;
   Report: ReportParams;
   /** ดูตำแหน่งร้านบนแผนที่เต็มจอ (ดูอย่างเดียว ย้ายหมุดไม่ได้) */
   StoreLocation: StoreLocationParams;
@@ -173,6 +179,8 @@ export type SellerStackParamList = {
   Notifications: undefined;
   /** ร้านก็แก้ชื่อ/เบอร์/รูปโปรไฟล์ของตัวเองได้ ใช้หน้าจอเดียวกับฝั่งลูกค้า */
   EditProfile: undefined;
+  /** ร้านก็เปลี่ยนรหัสผ่านตัวเองได้ ใช้หน้าจอเดียวกับฝั่งลูกค้า */
+  ChangePassword: undefined;
   Report: ReportParams;
   /** ดูตำแหน่งร้านบนแผนที่เต็มจอ (หน้ารายละเอียดการจองใช้ร่วมกันทั้งสองฝั่ง) */
   StoreLocation: StoreLocationParams;
