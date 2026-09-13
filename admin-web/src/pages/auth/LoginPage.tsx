@@ -107,11 +107,18 @@ export default function LoginPage(): JSX.Element {
           ลูกค้าและร้านค้าให้ใช้แอปมือถือ
         </div>
 
-        {/* ลบกล่องนี้ทิ้งก่อนส่งงานจริง */}
-        <div style={styles.demo}>
-          <strong>บัญชีทดสอบ</strong>
-          <div>admin@saveeats.com / 123456</div>
-        </div>
+        {/*
+          *** เคยมีกล่อง "บัญชีทดสอบ" ตรงนี้ ลบออกแล้วเมื่อ 13 ก.ย. 2569 ***
+
+          กล่องนั้นโชว์อีเมลกับรหัสผ่านของผู้ดูแลไว้บนหน้าจอ มีไว้ให้สะดวก
+          ตอนพัฒนาในเครื่องตัวเอง ซึ่งไม่มีใครนอกจากเราเห็น
+
+          พอเว็บขึ้น Vercel แล้ว ใครที่รู้ลิงก์ก็เปิดหน้านี้ได้ทุกคน
+          การโชว์รหัสผู้ดูแลไว้จึงเท่ากับแจกกุญแจให้ทุกคนที่เดินผ่าน
+
+          ถ้าต้องการให้อาจารย์หรือผู้ตรวจเข้าไปดู ให้ส่งบัญชีทางช่องทางอื่น
+          เช่น เขียนในรายงาน หรือบอกตอนนำเสนอ ไม่ใช่แปะไว้บนหน้าเว็บ
+        */}
       </div>
     </div>
   );
@@ -143,12 +150,5 @@ const styles: Record<string, CSSProperties> = {
   notice: {
     textAlign: 'center', fontSize: 13,
     color: 'var(--color-text-muted)', marginTop: 20,
-  },
-  demo: {
-    marginTop: 20, padding: 12,
-    background: 'var(--color-primary-surface)',
-    border: '1px solid var(--color-primary-light)',
-    borderRadius: 'var(--radius-md)',
-    fontSize: 12, color: 'var(--color-text-secondary)',
   },
 };
