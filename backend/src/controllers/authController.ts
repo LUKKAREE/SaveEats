@@ -44,13 +44,13 @@ export const authController = {
   /**
    * POST /api/auth/forgot-password
    *
-   * *** ตอบข้อความเดียวกันเสมอ ***
-   * ไม่ว่าอีเมลนั้นจะมีในระบบหรือไม่ก็ตาม เพื่อไม่ให้คนร้ายไล่เช็ค
-   * ได้ว่าใครเป็นสมาชิกของเราบ้าง
+   * *** มาถึงบรรทัดนี้ได้ก็ต่อเมื่ออีเมลมีอยู่จริงและบัญชียังใช้งานได้ ***
+   * กรณีอื่น service โยน error ออกไปก่อนแล้ว (ไม่พบอีเมล / บัญชีถูกระงับ)
+   * ข้อความตรงนี้จึงพูดได้เต็มปาก ไม่ต้องขึ้นต้นว่า "ถ้าอีเมลนี้มีอยู่ในระบบ"
    */
   async forgotPassword(req: Request, res: Response): Promise<void> {
     const result = await authService.forgotPassword(req.body as ForgotPasswordRequest);
-    ok(res, result, 'ถ้าอีเมลนี้มีอยู่ในระบบ เราได้ส่งรหัสตั้งรหัสผ่านใหม่ไปให้แล้ว');
+    ok(res, result, 'ส่งรหัสตั้งรหัสผ่านใหม่ไปให้แล้ว');
   },
 
   /** POST /api/auth/reset-password */
