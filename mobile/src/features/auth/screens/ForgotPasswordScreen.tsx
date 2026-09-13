@@ -35,8 +35,10 @@ export default function ForgotPasswordScreen({
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  /** รหัสที่ backend ส่งกลับมา มีค่าเฉพาะโหมดสาธิตที่ยังไม่ได้ตั้งค่าอีเมล */
+  /** รหัสที่ backend ส่งกลับมา มีค่าเฉพาะโหมดสาธิตและอีเมลนั้นมีอยู่จริง */
   const [demoCode, setDemoCode] = useState<string | null>(null);
+  /** เซิร์ฟเวอร์ยังไม่ได้ผูกบัญชีส่งอีเมลหรือไม่ (ไม่ขึ้นกับว่าอีเมลมีจริงไหม) */
+  const [demoMode, setDemoMode] = useState(false);
 
   async function handleSubmit(): Promise<void> {
     setServerError(null);
@@ -56,18 +58,26 @@ export default function ForgotPasswordScreen({
        * เซิร์ฟเวอร์ส่งอีเมลได้จริง ตอนที่ยังไม่ได้ผูกบัญชีส่งอีเมล ผู้ใช้ไม่มี
        * จดหมายให้เปิด การบังคับให้หยุดอ่านหน้านั้นจึงเป็นการขวางทางเปล่า ๆ
        *
-       * พอตั้งค่า SMTP เมื่อไหร่ demoCode จะกลายเป็น null เอง เงื่อนไขนี้ก็จะ
-       * ไม่เข้า และหน้าคั่นจะกลับมาทำงานตามเดิมอัตโนมัติ ไม่ต้องแก้โค้ดซ้ำ
+       * *** ต้องเช็ค demoMode ห้ามเช็ค demoCode ***
+       * demoCode เป็น null ตอนที่อีเมลไม่มีในระบบด้วย ถ้าเอามาตัดสินตรงนี้
+       * อีเมลที่มีจริงจะข้ามหน้าคั่น ส่วนอีเมลมั่วจะไม่ข้าม กลายเป็นว่า
+       * หน้าจอบอกใบ้ว่าอีเมลนั้นเป็นสมาชิกหรือเปล่า
+       * (เคยพลาดข้อนี้มาแล้ว 13 ก.ย. 2569 จึงเขียนเตือนไว้)
+       *
+       * demoMode คำนวณจากการตั้งค่า SMTP อย่างเดียว ทุกอีเมลจึงเดินทางเดียวกัน
+       * พอตั้งค่า SMTP เมื่อไหร่ ค่านี้เป็น false เอง หน้าคั่นก็กลับมาทำงานตามเดิม
        */
-      if (result.demoCode !== null) {
+      if (result.demoMode) {
         navigation.navigate('ResetPassword', {
           email: email.trim(),
           demoCode: result.demoCode,
+          demoMode: true,
         });
         return;
       }
 
       setDemoCode(result.demoCode);
+      setDemoMode(result.demoMode);
       setSent(true);
     } catch (err) {
       setServerError(errorMessage(err));
@@ -102,7 +112,9 @@ export default function ForgotPasswordScreen({
 
           <AppButton
             title="กรอกรหัสแล้วตั้งรหัสผ่านใหม่"
-            onPress={() => navigation.navigate('ResetPassword', { email: email.trim(), demoCode })}
+            onPress={() =>
+              navigation.navigate('ResetPassword', { email: email.trim(), demoCode, demoMode })
+            }
             style={styles.doneButton}
           />
 

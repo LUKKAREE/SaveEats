@@ -262,8 +262,16 @@ export const authService = {
    * ถ้าตอบต่างกัน คนร้ายจะเอาไปไล่เช็คได้ว่าใครเป็นสมาชิกของเราบ้าง
    */
   async forgotPassword({ email }: ForgotPasswordRequest): Promise<ForgotPasswordResult> {
+    /*
+     * *** demoMode ต้องคำนวณก่อนเช็คว่าอีเมลมีอยู่จริงไหม ***
+     * เพราะค่านี้ต้องเหมือนกันทุกกรณี ไม่ว่าอีเมลที่กรอกมาจะมีในระบบหรือไม่
+     * ถ้าไปคำนวณทีหลังหรือผูกกับการมีอยู่ของผู้ใช้ หน้าจอฝั่งแอปจะต่างกัน
+     * แล้วกลายเป็นบอกใบ้ว่าใครเป็นสมาชิกของเราบ้าง
+     */
+    const demoMode = !emailService.isConfigured;
+
     const user = await userModel.findByEmail(normalizeEmail(email));
-    if (!user || !user.is_active) return { demoCode: null };
+    if (!user || !user.is_active) return { demoCode: null, demoMode };
 
     // token ตัวจริงที่ส่งไปในอีเมล - สุ่มยาว 64 ตัวอักษร เดาไม่ได้
     const token = crypto.randomBytes(32).toString('hex');
@@ -294,7 +302,7 @@ export const authService = {
      * พอเติม SMTP_USER ใน .env เมื่อไหร่ ค่านี้จะกลายเป็น null เองอัตโนมัติ
      * ไม่ต้องแก้โค้ดสักบรรทัด
      */
-    return { demoCode: emailService.isConfigured ? null : code };
+    return { demoCode: demoMode ? code : null, demoMode };
   },
 
   /**

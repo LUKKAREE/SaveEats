@@ -88,7 +88,15 @@ export type AuthStackParamList = {
    * demoCode มีค่าเฉพาะตอนที่เซิร์ฟเวอร์ยังไม่ได้ผูกบัญชีส่งอีเมล
    * ระบบจริงจะเป็น null เสมอ เพราะรหัสต้องเดินทางไปทางอีเมลเท่านั้น
    */
-  ResetPassword: { email: string; demoCode: string | null };
+  /*
+   * demoCode = รหัสที่เซิร์ฟเวอร์กรอกให้ (มีเฉพาะตอนอีเมลมีจริง + ยังไม่ตั้ง SMTP)
+   * demoMode = เซิร์ฟเวอร์ยังไม่ได้ผูกบัญชีส่งอีเมลหรือไม่
+   *
+   * ต้องใช้ demoMode ตัดสินว่าจะวาดหน้าจอแบบไหน ห้ามใช้ demoCode
+   * เพราะ demoCode เป็น null ตอนอีเมลไม่มีในระบบด้วย ซึ่งจะทำให้
+   * หน้าจอต่างกันแล้วบอกใบ้ว่าอีเมลนั้นเป็นสมาชิกหรือเปล่า
+   */
+  ResetPassword: { email: string; demoCode: string | null; demoMode: boolean };
 };
 
 /** แท็บล่างของลูกค้า */

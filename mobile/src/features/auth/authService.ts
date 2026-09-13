@@ -139,10 +139,21 @@ export const authService = {
    * คืน demoCode เฉพาะตอนที่เซิร์ฟเวอร์ยังไม่ได้ตั้งค่าอีเมล (โหมดสาธิต)
    * ปกติจะเป็น null เพราะรหัสต้องเดินทางไปทางอีเมลเท่านั้น
    */
-  async forgotPassword(email: string): Promise<{ message: string; demoCode: string | null }> {
+  async forgotPassword(
+    email: string
+  ): Promise<{ message: string; demoCode: string | null; demoMode: boolean }> {
     const body: ForgotPasswordRequest = { email };
     const res = await apiPost<ApiResponse<ForgotPasswordResult>>(ENDPOINTS.FORGOT_PASSWORD, body);
-    return { message: res.message, demoCode: res.data?.demoCode ?? null };
+    return {
+      message: res.message,
+      demoCode: res.data?.demoCode ?? null,
+      /*
+       * ถ้าเซิร์ฟเวอร์รุ่นเก่ายังไม่ส่ง demoMode มา ให้ถือว่าไม่ใช่โหมดสาธิต
+       * จะได้แสดงหน้าจอแบบเต็ม (มีช่องกรอกรหัส) ซึ่งใช้งานได้ทุกกรณี
+       * ดีกว่าซ่อนช่องกรอกแล้วผู้ใช้ทำอะไรต่อไม่ได้
+       */
+      demoMode: res.data?.demoMode ?? false,
+    };
   },
 
   /** ตั้งรหัสผ่านใหม่ด้วยรหัส 6 หลักที่กรอกในแอป */
