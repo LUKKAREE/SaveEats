@@ -1,5 +1,14 @@
 /**
- * สร้างโพสต์ขาย
+ * สร้างโพสต์ขาย และแก้ไขโพสต์เดิม
+ *
+ * หน้าเดียวทำสองหน้าที่ แยกกันด้วย route params
+ *   ไม่มี params        - สร้างโพสต์ใหม่ ฟอร์มว่างเปล่า
+ *   params.repost       - สร้างโพสต์ใหม่ โดยกรอกค่าจากโพสต์เก่ามาให้ล่วงหน้า
+ *   params.edit         - บันทึกทับโพสต์เดิม (เพิ่มเมื่อ 16 ก.ย. 2569)
+ *
+ * *** ทำไมใช้หน้าเดียวกัน ไม่แยกหน้าแก้ไขออกมา ***
+ * ช่องกรอก การตรวจความถูกต้อง และกฎเรื่องเวลาเหมือนกันทุกข้อ
+ * แยกหน้าจะต้องดูแลตรรกะเดียวกันสองที่ แล้วมันจะค่อย ๆ ไม่ตรงกันเอง
  *
  * ขั้นตอน : เลือกเมนูจากคลัง -> ตั้งราคาลด -> ใส่จำนวน -> เลือกช่วงเวลารับ
  *
@@ -207,30 +216,54 @@ export default function SellerPostFormScreen({ route, navigation }: Props): JSX.
     ซึ่งน่าหงุดหงิดมากเพราะพิมพ์เท่าไหร่ก็ไม่ติด
   */
   const repost = route.params?.repost;
-  /** เช็คแล้วหรือยังว่าเมนูที่จะลงขายซ้ำยังอยู่ในคลังไหม (ทำครั้งเดียวตอนโหลดรอบแรก) */
+
+  /*
+    ค่าที่ส่งมาจากปุ่ม "แก้ไข" ของโพสต์ที่ยังขายอยู่และยังไม่มีใครจอง
+
+    *** ต่างจาก repost ตรงปลายทาง ไม่ใช่ตรงหน้าตา ***
+    repost = เอาค่าเดิมมาตั้งต้น แล้วสร้างโพสต์ใหม่ โพสต์เก่ายังอยู่
+    edit   = บันทึกทับโพสต์เดิม ไม่มีโพสต์ใหม่เกิดขึ้น
+    ฟอร์มหน้าตาเหมือนกันทุกช่อง ต่างกันแค่ตอนกดปุ่มบันทึก
+  */
+  const edit = route.params?.edit;
+
+  /** ค่าที่เอามากรอกล่วงหน้า สองโหมดใช้ช่องเดียวกันหมด */
+  const prefill = edit ?? repost;
+
+  /** เช็คแล้วหรือยังว่าเมนูที่กรอกมาให้ยังอยู่ในคลังไหม (ทำครั้งเดียวตอนโหลดรอบแรก) */
   const repostChecked = useRef(false);
 
   const [foods, setFoods] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedFoodId, setSelectedFoodId] = useState<number | null>(repost?.foodId ?? null);
+  const [selectedFoodId, setSelectedFoodId] = useState<number | null>(prefill?.foodId ?? null);
   const [discountPrice, setDiscountPrice] = useState(
-    repost !== undefined ? String(repost.discountPrice) : ''
+    prefill !== undefined ? String(prefill.discountPrice) : ''
   );
   const [quantity, setQuantity] = useState(
-    repost !== undefined ? String(repost.quantity) : ''
+    prefill !== undefined ? String(prefill.quantity) : ''
   );
-  const [caption, setCaption] = useState(repost?.caption ?? '');
+  const [caption, setCaption] = useState(prefill?.caption ?? '');
   const [image, setImage] = useState<PickedImage | null>(null);
   const [startHours, setStartHours] = useState<number>(0);
   const [durationHours, setDurationHours] = useState<number>(3);
   /** จองแล้วต้องมารับภายในกี่นาที ก่อนคิวจะหลุดให้คนอื่น */
-  const [holdMinutes, setHoldMinutes] = useState<number>(30);
+  const [holdMinutes, setHoldMinutes] = useState<number>(edit?.holdMinutes ?? 30);
 
-  /** false = ใช้ปุ่มลัด / true = เลือกวันเวลาเอง */
-  const [customTime, setCustomTime] = useState(false);
-  const [customStart, setCustomStart] = useState<Date>(() => hoursFromNow(0));
-  const [customEnd, setCustomEnd] = useState<Date>(() => hoursFromNow(3));
+  /*
+   * โหมดเวลา
+   *
+   * *** โหมดแก้ไขบังคับใช้ "กำหนดเอง" เสมอ ***
+   * ปุ่มลัดคิดเวลาจาก "ตอนนี้" เป็นชั่วโมงเต็ม ซึ่งแทบไม่มีทางตรงกับเวลาเดิมของโพสต์
+   * ถ้าเปิดมาเป็นปุ่มลัด ร้านที่แค่อยากแก้ราคาจะโดนเปลี่ยนเวลารับไปด้วยโดยไม่รู้ตัว
+   */
+  const [customTime, setCustomTime] = useState(edit !== undefined);
+  const [customStart, setCustomStart] = useState<Date>(
+    () => (edit !== undefined ? new Date(edit.pickupStartMs) : hoursFromNow(0))
+  );
+  const [customEnd, setCustomEnd] = useState<Date>(
+    () => (edit !== undefined ? new Date(edit.pickupEndMs) : hoursFromNow(3))
+  );
 
   /*
    * ข้อความในช่องพิมพ์เวลา
@@ -242,8 +275,12 @@ export default function SellerPostFormScreen({ route, navigation }: Props): JSX.
    *
    * จึงให้ช่องพิมพ์ถือข้อความดิบไว้เอง แล้วค่อยกลั่นลง Date เมื่อค่าใช้ได้จริง
    */
-  const [startText, setStartText] = useState(() => toTimeText(hoursFromNow(0)));
-  const [endText, setEndText] = useState(() => toTimeText(hoursFromNow(3)));
+  const [startText, setStartText] = useState(
+    () => toTimeText(edit !== undefined ? new Date(edit.pickupStartMs) : hoursFromNow(0))
+  );
+  const [endText, setEndText] = useState(
+    () => toTimeText(edit !== undefined ? new Date(edit.pickupEndMs) : hoursFromNow(3))
+  );
 
   /** ช่องนาที เอาไว้เด้ง cursor ไปให้เองเมื่อพิมพ์ชั่วโมงครบ 2 หลัก */
   const startMinuteRef = useRef<TextInput>(null);
@@ -297,7 +334,7 @@ export default function SellerPostFormScreen({ route, navigation }: Props): JSX.
           */
           if (!repostChecked.current) {
             repostChecked.current = true;
-            const wanted = repost?.foodId;
+            const wanted = prefill?.foodId;
             if (wanted !== undefined && !usable.some((f) => f.food_id === wanted)) {
               setSelectedFoodId(null);
               setServerError('เมนูเดิมไม่อยู่ในคลังแล้ว กรุณาเลือกเมนูใหม่');
@@ -495,7 +532,17 @@ export default function SellerPostFormScreen({ route, navigation }: Props): JSX.
 
     setSaving(true);
     try {
-      await postService.create(body, image);
+      /*
+        *** โหมดแก้ไขส่ง caption เป็นข้อความว่างได้ ***
+        body ข้างบนตัด caption ทิ้งเมื่อช่องว่าง ซึ่งถูกต้องสำหรับการสร้างใหม่
+        แต่ตอนแก้ไข การไม่ส่ง caption แปลว่า "เก็บข้อความเดิมไว้" ร้านที่ลบ
+        ข้อความออกจนหมดจะลบไม่สำเร็จ จึงต้องส่งข้อความว่างไปให้ชัดเจน
+      */
+      if (edit !== undefined) {
+        await postService.update(edit.postId, { ...body, caption: caption.trim() }, image);
+      } else {
+        await postService.create(body, image);
+      }
       navigation.goBack();
     } catch (err) {
       setServerError(errorMessage(err));
@@ -834,7 +881,7 @@ export default function SellerPostFormScreen({ route, navigation }: Props): JSX.
           </FormSection>
 
           <AppButton
-            title="ลงขายเลย"
+            title={edit !== undefined ? 'บันทึกการแก้ไข' : 'ลงขายเลย'}
             onPress={() => { void handleSubmit(); }}
             loading={saving}
           />

@@ -171,12 +171,30 @@ export type SellerStackParamList = {
    * repost มีค่าเมื่อร้านกด "ลงขายอีกครั้ง" จากโพสต์เก่าที่หมดเวลาไปแล้ว
    * ฟอร์มจะกรอกเมนู ราคา จำนวน มาให้ล่วงหน้า เหลือแค่ตั้งเวลาใหม่
    *
+   * edit มีค่าเมื่อร้านกด "แก้ไข" จากโพสต์ที่ยังขายอยู่และยังไม่มีใครจอง
+   * ฟอร์มจะกรอกทุกช่องมาให้ครบรวมทั้งเวลา แล้วบันทึกทับโพสต์เดิมแทนการสร้างใหม่
+   *
    * *** ส่งค่ามาเลย ไม่ได้ส่งแค่ postId ***
    * หน้ารายการโพสต์มีข้อมูลครบอยู่ในมือแล้ว การให้ฟอร์มไปยิง API ถามซ้ำ
    * มีแต่ทำให้ผู้ใช้ต้องรอโหลดอีกจังหวะโดยไม่ได้อะไรเพิ่ม
+   *
+   * *** ส่งเวลาเป็นตัวเลข epoch ไม่ใช่ข้อความ ***
+   * ข้อความเวลาจาก MySQL เป็นรูปแบบ '2026-09-16 01:15:00' ซึ่ง new Date()
+   * ของบางเครื่องอ่านไม่ออกและได้ Invalid Date หน้ารายการจึงแปลงเป็นตัวเลขให้เรียบร้อย
+   * ก่อนส่งมา ฟอร์มรับไปสร้าง Date ได้ตรง ๆ โดยไม่ต้องกังวลเรื่องรูปแบบ
    */
   SellerPostForm: {
     repost?: { foodId: number; discountPrice: number; quantity: number; caption: string | null };
+    edit?: {
+      postId: number;
+      foodId: number;
+      discountPrice: number;
+      quantity: number;
+      caption: string | null;
+      pickupStartMs: number;
+      pickupEndMs: number;
+      holdMinutes: number;
+    };
   } | undefined;
   SellerEnterCode: undefined;
   SellerReviews: undefined;

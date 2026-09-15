@@ -9,6 +9,11 @@
  *
  * API : GET /api/stores/:id           (ข้อมูลร้าน + โพสต์ที่ active)
  *       GET /api/stores/:id/reviews   (รีวิว + สรุปจำนวนดาว)
+ *
+ * *** ที่อยู่ร้านแตะเพื่อเปิดแผนที่ได้ ***
+ * เดิมหน้านี้แสดงที่อยู่เป็นข้อความเฉย ๆ ทั้งที่หน้า StoreLocation มีอยู่แล้ว
+ * แต่ไม่มีปุ่มไหนในแอปพาไปหน้านั้นจากที่นี่เลย ผู้ใช้จึงดูตำแหน่งร้านไม่ได้
+ * แก้เมื่อ 16 ก.ย. 2569 หลังพบระหว่างการทดสอบการยอมรับของผู้ใช้
  */
 import { useCallback, useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, Linking, TouchableOpacity, Alert } from 'react-native';
@@ -99,6 +104,9 @@ export default function StoreDetailScreen({ route, navigation }: Props): JSX.Ele
   const { store, posts } = data;
   const cover = imageUrl(store.image, 'store');
 
+  /** ร้านปักหมุดไว้แล้วหรือยัง ถ้ายังก็ไม่ควรมีปุ่มเปิดแผนที่ให้กด */
+  const hasLocation = store.latitude !== null && store.longitude !== null;
+
   /**
    * กด/เลิกกดหัวใจ
    *
@@ -170,7 +178,40 @@ export default function StoreDetailScreen({ route, navigation }: Props): JSX.Ele
             />
           ) : null}
 
-          {store.address !== null ? <InfoRow icon="location-outline" text={store.address} /> : null}
+          {/*
+            ที่อยู่ร้าน — แตะแล้วเปิดแผนที่เต็มจอ
+
+            *** ทำไมต้องเช็คพิกัดก่อนถึงจะให้กดได้ ***
+            หน้า StoreLocation ต้องใช้ latitude กับ longitude เป็นตัวเลขเสมอ
+            ร้านที่ยังไม่ได้ปักหมุดจะมีค่าเป็น null การให้กดได้ทั้งที่ไม่มีพิกัด
+            จะพาไปหน้าแผนที่เปล่า ๆ ซึ่งแย่กว่าการไม่มีปุ่มให้กดตั้งแต่แรก
+            กรณีนั้นจึงแสดงที่อยู่เป็นข้อความเฉย ๆ เหมือนเดิม
+
+            ใช้ Number() ครอบไว้เพราะคอลัมน์เป็น DECIMAL ตัวเชื่อมต่อฐานข้อมูล
+            อาจคืนค่ามาเป็นข้อความ หน้าแผนที่รับเฉพาะตัวเลขเท่านั้น
+          */}
+          {hasLocation ? (
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('StoreLocation', {
+                  storeName: store.store_name,
+                  address: store.address,
+                  latitude: Number(store.latitude),
+                  longitude: Number(store.longitude),
+                })
+              }
+              activeOpacity={0.7}
+            >
+              <InfoRow
+                icon="location-outline"
+                text={store.address ?? 'ดูตำแหน่งร้านบนแผนที่'}
+                link
+                trailing="map-outline"
+              />
+            </TouchableOpacity>
+          ) : store.address !== null ? (
+            <InfoRow icon="location-outline" text={store.address} />
+          ) : null}
 
           {/* กดเบอร์แล้วโทรออกได้เลย ลดขั้นตอนให้ผู้ใช้ */}
           {store.phone !== null ? (
@@ -253,15 +294,23 @@ export default function StoreDetailScreen({ route, navigation }: Props): JSX.Ele
   );
 }
 
-/** แถวข้อมูล 1 บรรทัด มีไอคอนนำหน้า */
+/**
+ * แถวข้อมูล 1 บรรทัด มีไอคอนนำหน้า
+ *
+ * trailing คือไอคอนท้ายแถว ใส่เมื่อแถวนั้นกดได้และพาไปหน้าอื่น
+ * ตัวอักษรสีเขียวอย่างเดียวยังบอกไม่ชัดว่าแตะได้ เพราะในหน้านี้มีข้อความสีเขียว
+ * ที่ไม่ได้กดได้อยู่ด้วย ไอคอนท้ายแถวจึงทำหน้าที่บอกว่า "แตะแล้วไปต่อ"
+ */
 function InfoRow({
   icon,
   text,
   link = false,
+  trailing,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   text: string;
   link?: boolean;
+  trailing?: keyof typeof Ionicons.glyphMap;
 }): JSX.Element {
   return (
     <View style={styles.infoRow}>
@@ -271,6 +320,9 @@ function InfoRow({
         color={link ? theme.colors.primary : theme.colors.textMuted}
       />
       <Text style={[styles.infoText, link ? styles.infoLink : null]}>{text}</Text>
+      {trailing !== undefined ? (
+        <Ionicons name={trailing} size={16} color={theme.colors.primary} />
+      ) : null}
     </View>
   );
 }

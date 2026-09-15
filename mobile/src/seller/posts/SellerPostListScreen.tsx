@@ -163,6 +163,33 @@ export default function SellerPostListScreen(): JSX.Element {
     });
   }
 
+  /**
+   * แก้ไขโพสต์ที่ยังขายอยู่
+   *
+   * ส่งค่าปัจจุบันไปให้ฟอร์มครบทุกช่องรวมทั้งเวลา ร้านเหลือแค่แก้ตรงที่อยากแก้
+   *
+   * *** แปลงเวลาเป็นตัวเลขก่อนส่ง ***
+   * ค่าจาก MySQL เป็นข้อความรูปแบบ '2026-09-16 01:15:00' ซึ่ง new Date()
+   * บนเครื่อง Android บางรุ่นอ่านไม่ออกและได้ Invalid Date
+   * การเปลี่ยนช่องว่างเป็น T ก่อน ทำให้กลายเป็นรูปแบบมาตรฐานที่อ่านออกทุกเครื่อง
+   * (เป็นวิธีเดียวกับที่ formatters.ts ใช้อยู่แล้วทั้งแอป)
+   */
+  function editPost(post: FeedItem): void {
+    const toMs = (value: string): number => new Date(String(value).replace(' ', 'T')).getTime();
+    navigation.navigate('SellerPostForm', {
+      edit: {
+        postId: post.post_id,
+        foodId: post.food_id,
+        discountPrice: Number(post.discount_price),
+        quantity: post.quantity_total,
+        caption: post.caption,
+        pickupStartMs: toMs(post.pickup_start),
+        pickupEndMs: toMs(post.pickup_end),
+        holdMinutes: post.hold_minutes,
+      },
+    });
+  }
+
   const header = (
     <>
       <AppButton
@@ -246,6 +273,19 @@ export default function SellerPostListScreen(): JSX.Element {
           const reserved = item.quantity_total - item.quantity_left;
           const finished = !isLive(item.status);
 
+          /*
+           * *** แก้ไขได้เฉพาะโพสต์ที่ยังขายอยู่และยังไม่มีใครจอง ***
+           *
+           * เหตุผลเดียวกับที่ลบได้เฉพาะโพสต์ที่ยังไม่มีคนจอง แต่หนักกว่า
+           * เพราะการแก้จำนวนจะเขียนทับ quantity_left ด้วยจำนวนใหม่ทั้งก้อน
+           * ถ้ามีคนจองไปแล้ว 2 ชุดจาก 10 แล้วร้านแก้เป็น 8 ระบบจะเข้าใจว่า
+           * เหลือ 8 ชุดทั้งที่จริงเหลือ 6 ของจะงอกขึ้นมาเองโดยไม่มีใครรู้
+           *
+           * โพสต์ที่มีคนจองแล้วจึงแก้ไม่ได้ ถ้าร้านอยากเปลี่ยนเงื่อนไขจริง ๆ
+           * ต้องรอคิวปัจจุบันจบก่อน แล้วค่อยลงขายรอบใหม่
+           */
+          const canEdit = !finished && reserved === 0;
+
           return (
             /*
               โพสต์ที่จบแล้วทำให้จางลง บอกด้วยสายตาว่านี่คือของที่ไม่ต้องสนใจแล้ว
@@ -302,6 +342,13 @@ export default function SellerPostListScreen(): JSX.Element {
                   <TouchableOpacity style={styles.repostButton} onPress={() => repost(item)}>
                     <Ionicons name="repeat" size={16} color={theme.colors.primaryDark} />
                     <Text style={styles.repostText}>ลงขายอีกครั้ง</Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                {canEdit ? (
+                  <TouchableOpacity style={styles.editButton} onPress={() => editPost(item)}>
+                    <Ionicons name="create-outline" size={16} color={theme.colors.primaryDark} />
+                    <Text style={styles.editText}>แก้ไข</Text>
                   </TouchableOpacity>
                 ) : null}
 
@@ -430,6 +477,29 @@ const styles = StyleSheet.create({
     marginRight: 'auto',
   },
   repostText: {
+    ...theme.textStyles.caption,
+    color: theme.colors.primaryDark,
+    fontFamily: theme.fonts.medium,
+  },
+
+  /*
+    ปุ่มแก้ไข ใช้หน้าตาชุดเดียวกับปุ่มลงขายอีกครั้ง
+    เพราะทั้งคู่เป็นการกระทำที่ปลอดภัยและย้อนกลับได้ ต่างจากปุ่มลบที่เป็นสีแดง
+    marginRight: 'auto' ดันปุ่มลบไปชิดขวาเสมอ ไม่ว่าจะมีปุ่มนี้อยู่หรือไม่
+  */
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 7,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.primarySurface,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    marginRight: 'auto',
+  },
+  editText: {
     ...theme.textStyles.caption,
     color: theme.colors.primaryDark,
     fontFamily: theme.fonts.medium,
