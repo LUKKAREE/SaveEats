@@ -487,17 +487,14 @@ export default function MapScreen(): JSX.Element {
                   style={[styles.row, selected ? styles.rowSelected : null]}
                   activeOpacity={0.7}
                   /*
-                   * กดครั้งแรก = เลื่อนแผนที่ไปหาร้าน (ยังอยู่หน้านี้ ดูร้านอื่นเทียบต่อได้)
-                   * กดซ้ำที่ร้านเดิม = เข้าหน้ารายละเอียดร้าน
-                   * ปุ่มลูกศรขวาสุด = เข้าหน้ารายละเอียดได้เลยโดยไม่ต้องกดสองที
+                   * แตะที่แถว = เข้าหน้ารายละเอียดร้านทันที
+                   *
+                   * เดิมต้องแตะสองครั้ง ครั้งแรกแค่เลื่อนแผนที่ ครั้งที่สองถึงจะเข้าหน้าร้าน
+                   * ผู้ทดสอบเข้าใจว่าแถวนี้กดไม่ได้ เพราะแตะครั้งแรกแล้วหน้าจอไม่เปลี่ยน
+                   * จึงย้ายหน้าที่ "เลื่อนแผนที่ไปหาร้าน" ไปไว้ที่ปุ่มหมุดด้านขวาแทน
+                   * แถวในรายการจึงทำงานเหมือนรายการทั่วไป คือแตะครั้งเดียวแล้วเข้าเลย
                    */
-                  onPress={() => {
-                    if (selected) {
-                      navigation.navigate('StoreDetail', { storeId: item.store_id });
-                    } else {
-                      focusStore(item);
-                    }
-                  }}
+                  onPress={() => navigation.navigate('StoreDetail', { storeId: item.store_id })}
                 >
                   {photo !== null ? (
                     <Image source={{ uri: photo }} style={styles.thumb} />
@@ -527,13 +524,26 @@ export default function MapScreen(): JSX.Element {
                     </View>
                   </View>
 
+                  {/*
+                    ปุ่มหมุด = เลื่อนแผนที่ไปหาร้านนี้ โดยไม่ต้องออกจากหน้าแผนที่
+                    ใช้ตอนอยากเทียบว่าร้านไหนอยู่ตรงไหนก่อนตัดสินใจเข้าไปดู
+                  */}
                   <TouchableOpacity
                     style={styles.openButton}
-                    onPress={() => navigation.navigate('StoreDetail', { storeId: item.store_id })}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    onPress={() => focusStore(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`ดูตำแหน่ง ${item.store_name} บนแผนที่`}
                   >
-                    <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                    <Ionicons
+                      name="locate"
+                      size={18}
+                      color={selected ? theme.colors.primaryDark : theme.colors.textMuted}
+                    />
                   </TouchableOpacity>
+
+                  {/* ลูกศรเป็นแค่สัญลักษณ์บอกว่าแถวนี้กดเข้าไปต่อได้ ไม่ใช่ปุ่ม */}
+                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
                 </TouchableOpacity>
               );
             }}
